@@ -158,7 +158,6 @@ export function buildArgs(opts: {
     args.push('--write-subs', '--sub-langs', opts.subtitleLangs.join(','))
   }
 
-  args.push('--ffmpeg-location', 'ffmpeg')
   args.push('--newline')
   args.push('-o', opts.outputPath)
   args.push(opts.url)
