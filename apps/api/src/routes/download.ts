@@ -108,13 +108,15 @@ export default async function downloadRoute(app: FastifyInstance) {
         } else {
           job.status = 'error'
           // Surface failure to Render logs for debugging
-          process.stderr.write(`[StreamVault] yt-dlp exit ${code} | ${body.url}\n${stderrBuf.slice(-800)}\n`)
-          const hint = stderrBuf.includes('not available in your country') || stderrBuf.includes('geo') || stderrBuf.includes('blocked')
-            ? ' (geo-restricted — try proxy lane)'
-            : stderrBuf.includes('Sign in') || stderrBuf.includes('bot')
+          const lastErr = stderrBuf.slice(-600).trim()
+          process.stderr.write(`[StreamVault] yt-dlp exit ${code} | ${body.url}\n${lastErr}\n`)
+          const hint = lastErr.includes('not available in your country') || lastErr.includes('geo') || lastErr.includes('blocked')
+            ? ' (geo-restricted)'
+            : lastErr.includes('Sign in') || lastErr.includes('bot')
               ? ' (bot-detected — use proxy lane)'
               : ''
-          job.emitter.emit('error', { error: `Download failed${hint}` })
+          // Include last 200 chars of stderr in error so client can diagnose
+          job.emitter.emit('error', { error: `Download failed${hint}: ${lastErr.slice(-200)}` })
         }
       })
 
