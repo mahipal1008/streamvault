@@ -16,9 +16,31 @@ export interface ParsedMeta {
   requiresProxy: boolean
 }
 
-export async function getMetadata(url: string, proxyUrl?: string): Promise<ParsedMeta> {
-  const args = ['--dump-single-json', '--no-playlist', '--no-warnings', '--flat-playlist']
+function buildBaseArgs(proxyUrl?: string): string[] {
+  const args = [
+    '--no-playlist', '--no-warnings',
+    // Use android + web clients to bypass YouTube bot detection
+    '--extractor-args', 'youtube:player_client=android,web',
+  ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
+  return args
+}
+
+function isProxyNeeded(stderr: string): boolean {
+  return (
+    stderr.includes('not available in your country') ||
+    stderr.includes('geo') ||
+    stderr.includes('blocked') ||
+    stderr.includes('unavailable') ||
+    stderr.includes('Sign in to confirm') ||
+    stderr.includes('bot detection') ||
+    stderr.includes('This content isn\'t available') ||
+    stderr.includes('Private video')
+  )
+}
+
+export async function getMetadata(url: string, proxyUrl?: string): Promise<ParsedMeta> {
+  const args = [...buildBaseArgs(proxyUrl), '--dump-single-json']
   args.push(url)
 
   return new Promise((resolve, reject) => {
@@ -31,18 +53,15 @@ export async function getMetadata(url: string, proxyUrl?: string): Promise<Parse
 
     const timer = setTimeout(() => {
       proc.kill()
-      reject(new Error('Metadata fetch timeout (30s)'))
-    }, 30_000)
+      reject(new Error('Metadata fetch timeout (45s)'))
+    }, 45_000)
 
     proc.on('close', (code) => {
       clearTimeout(timer)
       if (code !== 0) {
-        const isGeo =
-          stderr.includes('not available in your country') ||
-          stderr.includes('geo') ||
-          stderr.includes('blocked') ||
-          stderr.includes('unavailable')
-        const err = Object.assign(new Error(stderr.slice(0, 300)), { requiresProxy: isGeo })
+        const err = Object.assign(new Error(stderr.slice(0, 400)), {
+          requiresProxy: isProxyNeeded(stderr),
+        })
         reject(err)
         return
       }
@@ -78,9 +97,7 @@ export function buildArgs(opts: {
   outputPath: string
   proxyUrl?: string
 }): string[] {
-  const args: string[] = ['--no-playlist', '--no-warnings']
-
-  if (opts.proxyUrl) args.push('--proxy', opts.proxyUrl)
+  const args: string[] = [...buildBaseArgs(opts.proxyUrl)]
 
   const isAudioOnly =
     opts.videoFormatId === 'bestaudio' || opts.container === 'mp3' || opts.container === 'flac' || opts.container === 'aac' || opts.container === 'm4a' || opts.container === 'ogg'
@@ -114,8 +131,6 @@ export function buildArgs(opts: {
 }
 
 export function spawnDirect(url: string, formatId: string, proxyUrl?: string): Readable {
-  const args = ['--no-playlist', '--no-warnings', '-f', formatId, '-o', '-']
-  if (proxyUrl) args.push('--proxy', proxyUrl)
-  args.push(url)
+  const args = [...buildBaseArgs(proxyUrl), '-f', formatId, '-o', '-', url]
   return spawn('yt-dlp', args).stdout
 }
