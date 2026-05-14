@@ -19,8 +19,9 @@ export interface ParsedMeta {
 function buildBaseArgs(proxyUrl?: string): string[] {
   const args = [
     '--no-playlist', '--no-warnings',
-    // Use android + web clients to bypass YouTube bot detection
-    '--extractor-args', 'youtube:player_client=android,web',
+    // Use ios + android clients: ios provides up to 1080p, android is fallback
+    // Avoids YouTube bot detection on datacenter IPs
+    '--extractor-args', 'youtube:player_client=ios,android,mweb',
   ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
   return args
