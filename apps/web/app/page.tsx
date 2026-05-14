@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { VideoMetadata, DownloadRequest, SubtitleMode } from 'streamvault-shared'
+import type { VideoMetadata, DownloadRequest, SubtitleMode, Container } from 'streamvault-shared'
 import { UrlInput } from '@/components/url-input'
 import { PreviewCard } from '@/components/preview-card'
 import { FormatPicker } from '@/components/format-picker'
@@ -52,7 +52,7 @@ export default function HomePage() {
   }, [])
 
   const handleDownload = useCallback(
-    async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: string }) => {
+    async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: Container }) => {
       if (!meta) return
       setPhase('preparing')
 

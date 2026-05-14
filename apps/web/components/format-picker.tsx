@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Download, ChevronDown, ChevronUp, Mic, Subtitles, Music } from 'lucide-react'
-import type { VideoMetadata, QualityLabel, SubtitleMode } from 'streamvault-shared'
+import type { VideoMetadata, Container, SubtitleMode } from 'streamvault-shared'
 import { formatBytes } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
@@ -15,7 +15,7 @@ interface Props {
     audioTrackIds: string[]
     subtitleLangs: string[]
     subtitleMode: SubtitleMode
-    container: string
+    container: Container
   }) => void
   loading: boolean
 }
@@ -49,7 +49,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
   const [selectedAudio, setSelectedAudio] = useState<string[]>(audioTracks[0] ? [audioTracks[0].id] : [])
   const [selectedSubs, setSelectedSubs] = useState<string[]>([])
   const [subtitleMode, setSubtitleMode] = useState<SubtitleMode>('soft')
-  const [container, setContainer] = useState('mp4')
+  const [container, setContainer] = useState<Container>('mp4')
   const [advanced, setAdvanced] = useState(false)
 
   const currentFormat = useMemo(() => formats.find((f) => f.id === selectedFormat), [formats, selectedFormat])
