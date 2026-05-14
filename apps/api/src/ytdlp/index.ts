@@ -17,11 +17,16 @@ export interface ParsedMeta {
 }
 
 function buildBaseArgs(proxyUrl?: string): string[] {
+  const args = ['--no-playlist', '--no-warnings']
+  if (proxyUrl) args.push('--proxy', proxyUrl)
+  return args
+}
+
+function buildIosArgs(proxyUrl?: string): string[] {
   const args = [
     '--no-playlist', '--no-warnings',
-    // Use ios + android clients: ios provides up to 1080p, android is fallback
-    // Avoids YouTube bot detection on datacenter IPs
-    '--extractor-args', 'youtube:player_client=ios,android,mweb',
+    // Fallback: ios+android clients bypass bot detection but return limited formats
+    '--extractor-args', 'youtube:player_client=ios,android',
   ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
   return args
@@ -40,11 +45,17 @@ function isProxyNeeded(stderr: string): boolean {
   )
 }
 
-export async function getMetadata(url: string, proxyUrl?: string): Promise<ParsedMeta> {
-  const args = [...buildBaseArgs(proxyUrl), '--dump-single-json']
-  args.push(url)
+function isBotDetected(stderr: string): boolean {
+  return (
+    stderr.includes('Sign in to confirm') ||
+    stderr.includes('bot') ||
+    stderr.includes('age-restricted') ||
+    stderr.includes('This video is not available')
+  )
+}
 
-  return new Promise((resolve, reject) => {
+async function runYtdlp(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+  return new Promise((resolve) => {
     const proc = spawn('yt-dlp', args)
     let stdout = ''
     let stderr = ''
@@ -54,38 +65,62 @@ export async function getMetadata(url: string, proxyUrl?: string): Promise<Parse
 
     const timer = setTimeout(() => {
       proc.kill()
-      reject(new Error('Metadata fetch timeout (45s)'))
+      resolve({ stdout, stderr: stderr + '\nTIMEOUT', code: 1 })
     }, 45_000)
 
     proc.on('close', (code) => {
       clearTimeout(timer)
-      if (code !== 0) {
-        const err = Object.assign(new Error(stderr.slice(0, 400)), {
-          requiresProxy: isProxyNeeded(stderr),
-        })
-        reject(err)
-        return
-      }
-      try {
-        const raw = JSON.parse(stdout)
-        resolve({
-          title: raw.title ?? 'Untitled',
-          thumbnail: raw.thumbnail,
-          duration: raw.duration ?? 0,
-          uploader: raw.uploader ?? raw.channel ?? 'Unknown',
-          viewCount: raw.view_count,
-          uploadDate: raw.upload_date,
-          platform: raw.extractor_key ?? raw.extractor ?? 'Unknown',
-          formats: parseFormats(raw.formats ?? []),
-          audioTracks: parseAudioTracks(raw.formats ?? []),
-          subtitles: parseSubtitles(raw.subtitles ?? {}, raw.automatic_captions ?? {}),
-          requiresProxy: false,
-        })
-      } catch (e) {
-        reject(new Error(`Failed to parse yt-dlp output: ${e}`))
-      }
+      resolve({ stdout, stderr, code: code ?? 1 })
     })
   })
+}
+
+export async function getMetadata(url: string, proxyUrl?: string): Promise<ParsedMeta> {
+  // Phase 1: try with default clients (full quality, all formats)
+  const args1 = [...buildBaseArgs(proxyUrl), '--dump-single-json', url]
+  const result1 = await runYtdlp(args1)
+
+  if (result1.code === 0) {
+    return parseYtdlpOutput(result1.stdout)
+  }
+
+  const phase1BotDetected = isBotDetected(result1.stderr)
+
+  // Phase 2a: if bot-detected and no proxy, retry with ios/android (limited quality)
+  if (phase1BotDetected && !proxyUrl) {
+    const args2 = [...buildIosArgs(), '--dump-single-json', url]
+    const result2 = await runYtdlp(args2)
+    if (result2.code === 0) return parseYtdlpOutput(result2.stdout)
+    // ios fallback also failed — surface original error with requiresProxy hint
+    const err = Object.assign(new Error(result2.stderr.slice(0, 400)), { requiresProxy: true })
+    throw err
+  }
+
+  const err = Object.assign(new Error(result1.stderr.slice(0, 400)), {
+    requiresProxy: isProxyNeeded(result1.stderr),
+  })
+  throw err
+}
+
+function parseYtdlpOutput(stdout: string): ParsedMeta {
+  try {
+    const raw = JSON.parse(stdout)
+    return {
+      title: raw.title ?? 'Untitled',
+      thumbnail: raw.thumbnail,
+      duration: raw.duration ?? 0,
+      uploader: raw.uploader ?? raw.channel ?? 'Unknown',
+      viewCount: raw.view_count,
+      uploadDate: raw.upload_date,
+      platform: raw.extractor_key ?? raw.extractor ?? 'Unknown',
+      formats: parseFormats(raw.formats ?? []),
+      audioTracks: parseAudioTracks(raw.formats ?? []),
+      subtitles: parseSubtitles(raw.subtitles ?? {}, raw.automatic_captions ?? {}),
+      requiresProxy: false,
+    }
+  } catch (e) {
+    throw new Error(`Failed to parse yt-dlp output: ${e}`)
+  }
 }
 
 export function buildArgs(opts: {
