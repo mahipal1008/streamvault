@@ -6,6 +6,17 @@ import { createEncryptStream } from '../crypto/index.js'
 import { streamFile } from '../ffmpeg/index.js'
 
 export default async function streamRoute(app: FastifyInstance) {
+  // HEAD /stream/:jobId — returns status without consuming the key or streaming
+  app.head<{ Params: { jobId: string } }>('/stream/:jobId', async (req, reply) => {
+    const { jobId } = req.params
+    const job = getJob(jobId)
+    const key = getKey(jobId)
+    if (!job || !key) return reply.status(404).send()
+    if (job.status === 'error') return reply.status(500).send()
+    if (job.status === 'done') return reply.status(200).send()
+    return reply.status(202).send() // still processing
+  })
+
   app.get<{ Params: { jobId: string } }>('/stream/:jobId', async (req, reply) => {
     const { jobId } = req.params
     const job = getJob(jobId)
