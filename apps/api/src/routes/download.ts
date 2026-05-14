@@ -73,8 +73,11 @@ export default async function downloadRoute(app: FastifyInstance) {
 
       proc.stdout.on('data', () => {})
 
+      let stderrBuf = ''
       proc.stderr.on('data', (d: Buffer) => {
         const line = d.toString()
+        stderrBuf += line
+        if (stderrBuf.length > 4000) stderrBuf = stderrBuf.slice(-4000)
         const pm = line.match(PROGRESS_RE)
         if (pm) {
           job.progress = parseFloat(pm[1])
@@ -104,7 +107,14 @@ export default async function downloadRoute(app: FastifyInstance) {
           job.emitter.emit('done', {})
         } else {
           job.status = 'error'
-          job.emitter.emit('error', { error: 'Download process failed. Try a different format or use proxy lane.' })
+          // Surface failure to Render logs for debugging
+          process.stderr.write(`[StreamVault] yt-dlp exit ${code} | ${body.url}\n${stderrBuf.slice(-800)}\n`)
+          const hint = stderrBuf.includes('not available in your country') || stderrBuf.includes('geo') || stderrBuf.includes('blocked')
+            ? ' (geo-restricted — try proxy lane)'
+            : stderrBuf.includes('Sign in') || stderrBuf.includes('bot')
+              ? ' (bot-detected — use proxy lane)'
+              : ''
+          job.emitter.emit('error', { error: `Download failed${hint}` })
         }
       })
 

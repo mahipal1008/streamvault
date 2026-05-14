@@ -42,6 +42,9 @@ export function createJob(opts: {
     startTime: Date.now(),
   }
   job.emitter.setMaxListeners(20)
+  // Critical: prevent uncaught EventEmitter 'error' crash when no client is listening.
+  // Explicit listeners added by progress.ts / stream.ts still fire via their own .on/.once registrations.
+  job.emitter.on('error', () => {})
   jobs.set(opts.id, job)
   return job
 }
