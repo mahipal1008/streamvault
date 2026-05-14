@@ -56,18 +56,22 @@ export default async function downloadRoute(app: FastifyInstance) {
       const job = createJob({ id: jobId, url: body.url, lane, outputPath, filename })
       setKey(jobId, key)
 
-      const args = buildArgs({
-        url: body.url,
-        videoFormatId: body.videoFormatId,
-        audioTrackIds: body.audioTrackIds ?? [],
-        subtitleLangs: body.subtitleLangs ?? [],
-        subtitleMode: body.subtitleMode ?? 'soft',
-        container: ext,
-        outputPath,
-        proxyUrl,
-      })
+      function spawnYtdlp(useIosFallback = false) {
+        const spawnArgs = buildArgs({
+          url: body.url,
+          videoFormatId: body.videoFormatId,
+          audioTrackIds: body.audioTrackIds ?? [],
+          subtitleLangs: body.subtitleLangs ?? [],
+          subtitleMode: body.subtitleMode ?? 'soft',
+          container: ext,
+          outputPath,
+          proxyUrl,
+          useIosFallback,
+        })
+        return spawn('yt-dlp', spawnArgs, { stdio: ['ignore', 'pipe', 'pipe'] })
+      }
 
-      const proc = spawn('yt-dlp', args, { stdio: ['ignore', 'pipe', 'pipe'] })
+      let proc = spawnYtdlp(false)
       job.status = 'running'
       job.emitter.emit('status', { status: 'running' })
 
@@ -106,16 +110,39 @@ export default async function downloadRoute(app: FastifyInstance) {
           job.progress = 100
           job.emitter.emit('done', {})
         } else {
-          job.status = 'error'
-          // Surface failure to Render logs for debugging
           const lastErr = stderrBuf.slice(-600).trim()
+          const botDetected = lastErr.includes('Sign in') || lastErr.includes('bot') || lastErr.includes('Confirm you')
+          // Auto-retry YouTube with ios/android fallback if bot-detected and no proxy
+          if (botDetected && !proxyUrl) {
+            process.stderr.write(`[StreamVault] bot-detected, retrying with ios fallback | ${body.url}\n`)
+            stderrBuf = ''
+            proc = spawnYtdlp(true)
+            proc.stdout.on('data', () => {})
+            proc.stderr.on('data', (d: Buffer) => {
+              const l = d.toString()
+              stderrBuf += l
+              if (stderrBuf.length > 4000) stderrBuf = stderrBuf.slice(-4000)
+              const pm2 = l.match(PROGRESS_RE)
+              if (pm2) job.progress = parseFloat(pm2[1])
+              job.emitter.emit('progress', { progress: job.progress, received: job.received, speed: job.speed, status: 'running' })
+            })
+            proc.on('close', (code2) => {
+              if (code2 === 0) {
+                job.status = 'done'; job.progress = 100; job.emitter.emit('done', {})
+              } else {
+                job.status = 'error'
+                const e2 = stderrBuf.slice(-400).trim()
+                process.stderr.write(`[StreamVault] ios fallback also failed | ${body.url}\n${e2}\n`)
+                job.emitter.emit('error', { error: `Download failed (bot-detected — proxy required): ${e2.slice(-200)}` })
+              }
+            })
+            return
+          }
+          job.status = 'error'
           process.stderr.write(`[StreamVault] yt-dlp exit ${code} | ${body.url}\n${lastErr}\n`)
           const hint = lastErr.includes('not available in your country') || lastErr.includes('geo') || lastErr.includes('blocked')
             ? ' (geo-restricted)'
-            : lastErr.includes('Sign in') || lastErr.includes('bot')
-              ? ' (bot-detected — use proxy lane)'
-              : ''
-          // Include last 200 chars of stderr in error so client can diagnose
+            : botDetected ? ' (bot-detected — use proxy lane)' : ''
           job.emitter.emit('error', { error: `Download failed${hint}: ${lastErr.slice(-200)}` })
         }
       })

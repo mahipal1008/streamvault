@@ -123,6 +123,10 @@ function parseYtdlpOutput(stdout: string): ParsedMeta {
   }
 }
 
+function isYouTubeUrl(url: string): boolean {
+  return url.includes('youtube.com') || url.includes('youtu.be')
+}
+
 export function buildArgs(opts: {
   url: string
   videoFormatId: string
@@ -132,8 +136,12 @@ export function buildArgs(opts: {
   container: string
   outputPath: string
   proxyUrl?: string
+  useIosFallback?: boolean
 }): string[] {
-  const args: string[] = [...buildBaseArgs(opts.proxyUrl)]
+  const baseArgs = opts.useIosFallback && isYouTubeUrl(opts.url) && !opts.proxyUrl
+    ? buildIosArgs(opts.proxyUrl)
+    : buildBaseArgs(opts.proxyUrl)
+  const args: string[] = [...baseArgs]
 
   const isAudioOnly =
     opts.videoFormatId === 'bestaudio' || opts.container === 'mp3' || opts.container === 'flac' || opts.container === 'aac' || opts.container === 'm4a' || opts.container === 'ogg'
