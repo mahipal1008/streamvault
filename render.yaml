@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: streamvault-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    plan: starter
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: ALLOWED_ORIGIN
+        value: "*"
+      - key: PROXY_URL
+        sync: false
+      - key: API_KEY
+        sync: false
+
+  - type: web
+    name: streamvault-web
+    runtime: node
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter=streamvault-shared build && pnpm --filter=streamvault-web build
+    startCommand: pnpm --filter=streamvault-web start
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: streamvault-api
+          type: web
+          property: serviceUrl
