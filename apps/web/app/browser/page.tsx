@@ -182,6 +182,12 @@ export default function BrowserPage() {
   const handleDownload = useCallback(
     async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: Container; subtitleFormat?: 'srt' | 'vtt' }) => {
       if (!meta) return
+
+      // Open file sink IMMEDIATELY — showSaveFilePicker requires a user gesture.
+      // Must be the very first `await` so the gesture context is still valid.
+      const suggestedName = `${meta.title || 'download'}.${params.container}`
+      const sink = await createFileSink(suggestedName)
+
       setPhase('preparing')
       try {
         const req: DownloadRequest = { url: meta.url, title: meta.title, ...params }
@@ -223,10 +229,6 @@ export default function BrowserPage() {
         setPhase('decrypt')
         setProgress((p) => p ? { ...p, phase: 'decrypt' } : p)
 
-        // Use streaming file sink — writes to disk on Chromium (File System Access API),
-        // falls back to in-memory blob + anchor download on Safari/Firefox/Brave shields.
-        const sink = await createFileSink(dlRes.filename)
-
         const streamRes = await fetch(`${API_BASE}/api/stream/${dlRes.jobId}`)
         if (!streamRes.ok) throw new Error('Stream request failed')
 
@@ -241,6 +243,7 @@ export default function BrowserPage() {
         setPhase('done')
         toast.success(`Saved: ${dlRes.filename}`)
       } catch (e: unknown) {
+        try { await sink.abort?.() } catch {}
         toast.error((e as Error).message || 'Download failed')
         setPhase('preview')
       }

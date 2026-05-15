@@ -134,6 +134,12 @@ export default function HomePage() {
   const handleDownload = useCallback(
     async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: Container; subtitleFormat?: 'srt' | 'vtt' }) => {
       if (!meta) return
+
+      // Open file sink IMMEDIATELY — showSaveFilePicker requires a user gesture.
+      // Must be the very first `await` so the gesture context is still valid.
+      const suggestedName = `${meta.title || 'download'}.${params.container}`
+      const sink = await createFileSink(suggestedName)
+
       setPhase('preparing')
       const req: DownloadRequest = { url: meta.url, title: meta.title, ...params }
       setLastParams(req)
@@ -180,9 +186,6 @@ export default function HomePage() {
         setPhase('decrypt')
         setProgress((prev) => prev ? { ...prev, phase: 'decrypt' } : prev)
 
-        // Open file sink BEFORE fetching — File System Access API requires a user gesture context.
-        const sink = await createFileSink(dlRes.filename)
-
         const streamRes = await fetch(`${API_BASE}/api/stream/${dlRes.jobId}`)
         if (!streamRes.ok) throw new Error('Stream request failed')
 
@@ -204,6 +207,7 @@ export default function HomePage() {
       } catch (e: unknown) {
         keyRef.current = ''
         jobIdRef.current = ''
+        try { await sink.abort?.() } catch {}
         toast.error((e as Error).message || 'Download failed')
         setPhase('preview')
       }
