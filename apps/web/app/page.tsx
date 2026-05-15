@@ -59,20 +59,20 @@ const FORMATS = [
 ]
 
 const QUALITY_TIERS = [
-  { label: '8K', sub: '7680\u00d74320', tag: 'HDR / Dolby Vision', size: '\u224820\u201340 GB' },
-  { label: '4K', sub: '3840\u00d72160', tag: 'HDR10 / HDR10+', size: '\u22485\u201312 GB' },
-  { label: '1440p', sub: '2560\u00d71440', tag: 'QHD', size: '\u22482\u20134 GB' },
-  { label: '1080p', sub: '1920\u00d71080', tag: 'Full HD', size: '\u2248800 MB\u20131.5 GB' },
-  { label: '720p', sub: '1280\u00d7720', tag: 'HD', size: '\u2248300\u2013600 MB' },
-  { label: '480p / 360p', sub: 'SD', tag: 'Mobile', size: '\u2248100\u2013200 MB' },
+  { label: '8K', sub: '7680×4320', tag: 'HDR / Dolby Vision', size: '≈20–40 GB' },
+  { label: '4K', sub: '3840×2160', tag: 'HDR10 / HDR10+', size: '≈5–12 GB' },
+  { label: '1440p', sub: '2560×1440', tag: 'QHD', size: '≈2–4 GB' },
+  { label: '1080p', sub: '1920×1080', tag: 'Full HD', size: '≈800 MB–1.5 GB' },
+  { label: '720p', sub: '1280×720', tag: 'HD', size: '≈300–600 MB' },
+  { label: '480p / 360p', sub: 'SD', tag: 'Mobile', size: '≈100–200 MB' },
 ]
 
 const CAPABILITIES = [
-  { icon: Film, title: 'Video, up to 8K HDR', desc: 'Every yt-dlp format exposed \u2014 144p to 8K, HDR10, HDR10+, Dolby Vision.' },
+  { icon: Film, title: 'Video, up to 8K HDR', desc: 'Every yt-dlp format exposed — 144p to 8K, HDR10, HDR10+, Dolby Vision.' },
   { icon: Mic2, title: 'Multi-audio tracks', desc: 'Pick original + dubs (Hindi, Spanish, etc.) and mux them into one MKV.' },
-  { icon: Subtitles, title: 'Subtitles, every mode', desc: 'Soft-embedded, hard-burned, or sidecar .srt / .vtt files \u2014 your choice.' },
+  { icon: Subtitles, title: 'Subtitles, every mode', desc: 'Soft-embedded, hard-burned, or sidecar .srt / .vtt files — your choice.' },
   { icon: Languages, title: 'Auto-captions too', desc: 'YouTube auto-generated captions in any language available.' },
-  { icon: Music2, title: 'Audio-only extraction', desc: 'MP3, FLAC, AAC, M4A, OGG \u2014 highest bitrate, ID3 tags preserved.' },
+  { icon: Music2, title: 'Audio-only extraction', desc: 'MP3, FLAC, AAC, M4A, OGG — highest bitrate, ID3 tags preserved.' },
   { icon: ImageIcon, title: 'Thumbnails + metadata', desc: 'Full-resolution cover art, chapters, descriptions, upload date.' },
   { icon: Gauge, title: 'Built-in browser', desc: 'Open pages inside a sandboxed private browser, then grab the video in one click.' },
   { icon: FileText, title: 'Bundled with video', desc: 'Download subtitles together with the video file in one click.' },
@@ -93,14 +93,14 @@ const COMPARE = [
 const FAQS = [
   { q: 'Is StreamVault free?', a: 'Yes. No account, no paywall, no daily quota, no ads. Ever.' },
   { q: 'Do you store my downloads?', a: 'No. Files are streamed encrypted through memory only and discarded the moment your browser finishes decrypting them.' },
-  { q: 'What is the built-in browser?', a: 'A sandboxed, private in-app browser. Open any site inside it \u2014 no cookies are persisted, no trackers run, referrer is stripped. When a video plays, hit Detect & Download.' },
+  { q: 'What is the built-in browser?', a: 'A sandboxed, private in-app browser. Open any site inside it — no cookies are persisted, no trackers run, referrer is stripped. When a video plays, hit Detect & Download.' },
   { q: 'Why is the file encrypted?', a: 'So intermediaries (ISPs, your network, our own infrastructure) cannot read what you are downloading. The decryption key is generated in your browser and never sent to us.' },
-  { q: 'Does it work on every site?', a: 'Anything yt-dlp supports \u2014 over 1 000 platforms. If a site refuses to render inside the in-app browser (X-Frame-Options), just paste the URL on the home page \u2014 the same private pipeline downloads it.' },
-  { q: 'Can I get subtitles alongside the video?', a: 'Yes \u2014 pick languages in the picker and choose soft-embed (selectable in a player), hard-burn (always on screen), or sidecar .srt/.vtt files.' },
+  { q: 'Does it work on every site?', a: 'Anything yt-dlp supports — over 1 000 platforms. If a site refuses to render inside the in-app browser (X-Frame-Options), just paste the URL on the home page — the same private pipeline downloads it.' },
+  { q: 'Can I get subtitles alongside the video?', a: 'Yes — pick languages in the picker and choose soft-embed (selectable in a player), hard-burn (always on screen), or sidecar .srt/.vtt files.' },
 ]
 
 const TESTIMONIALS = [
-  { name: 'Aarav K.', role: 'Filmmaker', text: 'Finally a downloader that gives me real 4K HDR with Dolby Vision intact. MKV + multi-audio is chef\u2019s kiss.' },
+  { name: 'Aarav K.', role: 'Filmmaker', text: 'Finally a downloader that gives me real 4K HDR with Dolby Vision intact. MKV + multi-audio is chef’s kiss.' },
   { name: 'Luna R.', role: 'Translator', text: 'The sidecar .srt download alone is worth bookmarking this site forever.' },
   { name: 'Marcus T.', role: 'Privacy nerd', text: 'No accounts, end-to-end encrypted, no ads. This is what the internet should feel like.' },
 ]
@@ -239,7 +239,7 @@ export default function HomePage() {
           <div className="flex-1 text-left">
             <p className="text-sm font-semibold text-primary">Open a built-in private browser</p>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              Browse any site without restrictions, no cookies stored, no trackers. When a video plays \u2014 one click downloads it.
+              Browse any site without restrictions, no cookies stored, no trackers. When a video plays — one click downloads it.
             </p>
           </div>
           <Link
@@ -368,7 +368,7 @@ export default function HomePage() {
           <span className="badge mb-4">Every Resolution</span>
           <h2 className="text-2xl font-bold sm:text-3xl">From 144p to 8K HDR</h2>
           <p className="mx-auto mt-3 max-w-xl text-muted">
-            Pick the exact quality you need. Size estimates shown before you commit \u2014 no surprises.
+            Pick the exact quality you need. Size estimates shown before you commit — no surprises.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -393,7 +393,7 @@ export default function HomePage() {
           <div className="mb-12 text-center">
             <span className="badge mb-4">Capabilities</span>
             <h2 className="text-2xl font-bold sm:text-3xl">Everything in one place</h2>
-            <p className="mx-auto mt-3 max-w-xl text-muted">Video, audio, captions, thumbnails, metadata \u2014 grab any combination, in any container.</p>
+            <p className="mx-auto mt-3 max-w-xl text-muted">Video, audio, captions, thumbnails, metadata — grab any combination, in any container.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {CAPABILITIES.map(({ icon: Icon, title, desc }) => (
@@ -414,7 +414,7 @@ export default function HomePage() {
         <div className="mb-12 text-center">
           <span className="badge mb-4">Why StreamVault</span>
           <h2 className="text-2xl font-bold sm:text-3xl">Not like the others</h2>
-          <p className="mx-auto mt-3 max-w-lg text-muted">A no-nonsense comparison with the ad-riddled \u201cdownload\u201d sites.</p>
+          <p className="mx-auto mt-3 max-w-lg text-muted">A no-nonsense comparison with the ad-riddled “download” sites.</p>
         </div>
         <div className="card overflow-hidden">
           <div className="grid grid-cols-[1fr_120px_120px] border-b border-[var(--border)] bg-surface-2/40 px-5 py-3 text-xs font-semibold uppercase tracking-widest text-faint">
@@ -448,9 +448,9 @@ export default function HomePage() {
           <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/10 ring-1 ring-purple-500/20">
             <EyeOff className="h-6 w-6 text-purple-400" />
           </div>
-          <h2 className="text-2xl font-bold sm:text-3xl">Built like Brave \u2014 zero ads, zero trackers</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">Built like Brave — zero ads, zero trackers</h2>
           <p className="mx-auto mt-4 max-w-2xl leading-relaxed text-muted">
-            No banner ads. No popups. No \u201cwait 30 seconds\u201d timers. No fake download buttons. No newsletter modals.
+            No banner ads. No popups. No “wait 30 seconds” timers. No fake download buttons. No newsletter modals.
             No analytics scripts. No cookies. No third-party iframes. No fingerprinting.
             <br className="hidden sm:block" />
             What you see is the entire product.
@@ -484,7 +484,7 @@ export default function HomePage() {
                   <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                 ))}
               </div>
-              <p className="text-sm leading-relaxed text-secondary">\u201c{t.text}\u201d</p>
+              <p className="text-sm leading-relaxed text-secondary">“{t.text}”</p>
               <div className="mt-4 border-t border-[var(--border)] pt-3">
                 <p className="text-sm font-semibold text-primary">{t.name}</p>
                 <p className="text-xs text-faint">{t.role}</p>
