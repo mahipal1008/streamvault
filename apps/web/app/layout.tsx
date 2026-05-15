@@ -34,14 +34,16 @@ export const viewport: Viewport = {
   colorScheme: 'light dark',
 }
 
-// Inline script to prevent flash of wrong theme. Default is dark.
+// Inline script to prevent flash of wrong theme
 const themeScript = `
 (function(){
   try {
-    var t = localStorage.getItem('sv-theme');
-    var d = (t === 'light') ? 'light' : 'dark';
+    var t = localStorage.getItem('sv-theme') || 'system';
+    var d = t === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : t;
     document.documentElement.classList.add(d);
-  } catch(e){ document.documentElement.classList.add('dark'); }
+  } catch(e){}
 })();
 `
 
