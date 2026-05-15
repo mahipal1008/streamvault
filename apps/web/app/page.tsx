@@ -135,7 +135,7 @@ export default function HomePage() {
     async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: Container; subtitleFormat?: 'srt' | 'vtt' }) => {
       if (!meta) return
       setPhase('preparing')
-      const req: DownloadRequest = { url: meta.url, ...params }
+      const req: DownloadRequest = { url: meta.url, title: meta.title, ...params }
       setLastParams(req)
 
       try {

@@ -41,6 +41,7 @@ export default async function downloadRoute(app: FastifyInstance) {
             container: { type: 'string', enum: ['mkv', 'mp4', 'webm', 'mp3', 'aac', 'flac', 'm4a', 'ogg'] },
             preferredLane: { type: 'string', enum: ['direct', 'proxy'] },
             subtitleFormat: { type: 'string', enum: ['srt', 'vtt'] },
+            title: { type: 'string', maxLength: 200 },
           },
         },
       },
@@ -61,9 +62,12 @@ export default async function downloadRoute(app: FastifyInstance) {
       const outputPath = isSubsOnly
         ? join(subsDir, `sub.%(ext)s`)
         : join(tmpdir(), `sv_${jobId}.${ext}`)
+      // Use the client-supplied video title (sanitized) for a meaningful filename.
+      // Falls back to generic name if the client didn't pass one.
+      const baseName = body.title ? sanitizeName(body.title) : 'download'
       const filename = isSubsOnly
-        ? `subtitles.${subFmt}`
-        : `download.${ext}`
+        ? `${baseName}.${subFmt}`
+        : `${baseName}.${ext}`
 
       if (isSubsOnly) mkdirSync(subsDir, { recursive: true })
 
@@ -106,10 +110,14 @@ export default async function downloadRoute(app: FastifyInstance) {
           job.received = toBytes(parseFloat(sm[1]), sm[2])
           job.speed = toBytes(parseFloat(sm[3]), sm[4])
         }
-        const titleMatch = line.match(/\[download\]\s+Destination:\s+(.+)/)
-        if (titleMatch) {
-          const raw = titleMatch[1].trim().split(/[\\/]/).pop() ?? filename
-          job.filename = sanitizeName(raw)
+        // Only let yt-dlp's Destination override our filename when the client
+        // did NOT supply a title (otherwise we'd clobber the nice title-based name).
+        if (!body.title) {
+          const titleMatch = line.match(/\[download\]\s+Destination:\s+(.+)/)
+          if (titleMatch) {
+            const raw = titleMatch[1].trim().split(/[\\/]/).pop() ?? filename
+            job.filename = sanitizeName(raw)
+          }
         }
         job.emitter.emit('progress', {
           progress: job.progress,

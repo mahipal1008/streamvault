@@ -68,58 +68,101 @@ export async function decryptStreamTo(
   if (!response.body) throw new Error('Response has no body')
   const key = await importKey(keyBase64)
   const reader = response.body.getReader()
-  let ringBuf = new Uint8Array(0)
+
+  // Queue of incoming chunks + a head offset into the first chunk.
+  // Avoids the O(N^2) realloc/copy of a single growing ring buffer.
+  const queue: Uint8Array[] = []
+  let head = 0           // byte offset into queue[0]
+  let queued = 0         // total bytes available across the queue
+
   let totalDecrypted = 0
   let nextIndex = 0
   let terminated = false
+  let progressDirty = false
+  let lastProgressFlush = 0
 
-  const append = (chunk: Uint8Array) => {
-    const tmp = new Uint8Array(ringBuf.length + chunk.length)
-    tmp.set(ringBuf)
-    tmp.set(chunk, ringBuf.length)
-    ringBuf = tmp
+  /** Peek `n` bytes WITHOUT consuming — returns a contiguous view (may copy). */
+  function peek(n: number): Uint8Array | null {
+    if (queued < n) return null
+    // Fast path: first chunk already has it contiguous.
+    const first = queue[0]
+    if (first.length - head >= n) return first.subarray(head, head + n)
+    // Slow path: stitch across chunks.
+    const out = new Uint8Array(n)
+    let written = 0
+    let qi = 0
+    let off = head
+    while (written < n) {
+      const c = queue[qi]
+      const avail = c.length - off
+      const take = Math.min(avail, n - written)
+      out.set(c.subarray(off, off + take), written)
+      written += take
+      if (take === avail) { qi++; off = 0 } else { off += take }
+    }
+    return out
+  }
+
+  /** Drop `n` bytes from the head of the queue. */
+  function drop(n: number): void {
+    queued -= n
+    while (n > 0) {
+      const c = queue[0]
+      const avail = c.length - head
+      if (n < avail) { head += n; return }
+      n -= avail
+      queue.shift()
+      head = 0
+    }
+  }
+
+  function push(chunk: Uint8Array): void {
+    if (chunk.length === 0) return
+    queue.push(chunk)
+    queued += chunk.length
   }
 
   try {
     while (true) {
       const { done, value } = await reader.read()
-      if (value) append(value)
+      if (value) push(value)
 
-      while (ringBuf.length >= LEN_HDR) {
-        const view = new DataView(ringBuf.buffer, ringBuf.byteOffset)
+      while (queued >= LEN_HDR) {
+        const header = peek(LEN_HDR)!
+        const view = new DataView(header.buffer, header.byteOffset, LEN_HDR)
         const plaintextLen = view.getUint32(0, false)
-        const encryptedLen = IV_LEN + TAG_LEN + plaintextLen
-        const totalNeeded = LEN_HDR + encryptedLen
-        if (ringBuf.length < totalNeeded) break
+        const totalNeeded = LEN_HDR + IV_LEN + TAG_LEN + plaintextLen
+        if (queued < totalNeeded) break
 
-        const iv = ringBuf.slice(LEN_HDR, LEN_HDR + IV_LEN)
-        const tag = ringBuf.slice(LEN_HDR + IV_LEN, LEN_HDR + IV_LEN + TAG_LEN)
-        const ciphertext = ringBuf.slice(LEN_HDR + IV_LEN + TAG_LEN, totalNeeded)
-        ringBuf = ringBuf.slice(totalNeeded)
+        // Materialise the frame body contiguously (peek+drop).
+        const frame = peek(totalNeeded)!
+        const iv = frame.subarray(LEN_HDR, LEN_HDR + IV_LEN)
+        const tag = frame.subarray(LEN_HDR + IV_LEN, LEN_HDR + IV_LEN + TAG_LEN)
+        const ciphertext = frame.subarray(LEN_HDR + IV_LEN + TAG_LEN, totalNeeded)
+        drop(totalNeeded)
 
-        // Try as data chunk first; on failure retry as terminator. We don't
-        // know the flag in advance because it lives in the AAD only.
-        let plain: Uint8Array | null = null
-        try {
-          plain = await decryptFrame(key, iv, tag, ciphertext, nextIndex, false)
-        } catch {
-          try {
-            plain = await decryptFrame(key, iv, tag, ciphertext, nextIndex, true)
-            terminated = true
-          } catch {
-            throw new Error('Decryption failed: stream tampered, truncated, or reordered')
-          }
-        }
+        // FAST PATH: plaintextLen === 0 is the authenticated terminator. The
+        // server only emits zero-length frames as the terminator (data chunks
+        // of size 0 are skipped). No try/catch fallback needed.
+        const isFinal = plaintextLen === 0
+        const plain = await decryptFrame(key, iv, tag, ciphertext, nextIndex, isFinal)
         nextIndex++
 
-        if (terminated) {
-          if (plain.length !== 0) throw new Error('Decryption failed: bad terminator')
+        if (isFinal) {
+          terminated = true
           break
         }
 
-        if (plain.length > 0) {
-          await sink.write(plain)
-          totalDecrypted += plain.length
+        await sink.write(plain)
+        totalDecrypted += plain.length
+
+        // Throttle progress callbacks to ~30Hz so React state updates don't
+        // dominate the main thread when decrypting at hundreds of MB/s.
+        progressDirty = true
+        const now = performance.now()
+        if (now - lastProgressFlush >= 33) {
+          lastProgressFlush = now
+          progressDirty = false
           onProgress(totalDecrypted)
         }
       }
@@ -130,8 +173,16 @@ export async function decryptStreamTo(
         break
       }
     }
+    if (progressDirty) onProgress(totalDecrypted)
     await sink.close()
   } catch (e) {
+    // Surface authentication failure with the v2 wording the UI expects.
+    const msg = (e as Error).message
+    if (msg && /OperationError|cipher|gcm|tag/i.test(msg)) {
+      const tampered = new Error('Decryption failed: stream tampered, truncated, or reordered')
+      try { await sink.abort?.(tampered) } catch {}
+      throw tampered
+    }
     try { await sink.abort?.(e) } catch {}
     throw e
   }

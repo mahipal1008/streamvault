@@ -6,7 +6,7 @@ import type { VideoMetadata, Container, SubtitleMode } from 'streamvault-shared'
 import { formatBytes } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
-const CONTAINERS = ['mp4', 'mkv', 'webm', 'mp3', 'aac', 'flac', 'm4a'] as const
+const CONTAINERS = ['mp4', 'mkv', 'webm', 'mp3', 'aac', 'flac', 'm4a', 'ogg'] as const
 
 interface Props {
   meta: VideoMetadata
@@ -80,6 +80,19 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
     })
   }
 
+  // One-click audio-only download. The server flips to `-x` audio-extract mode
+  // whenever the container is mp3/aac/flac/m4a/ogg, so the videoFormatId is
+  // just a marker (we pick the first available so the schema still validates).
+  const downloadAudio = (audioContainer: Container) => {
+    onDownload({
+      videoFormatId: formats[0]?.id ?? 'bestaudio',
+      audioTrackIds: selectedAudio,
+      subtitleLangs: [],
+      subtitleMode: 'soft',
+      container: audioContainer,
+    })
+  }
+
   return (
     <div className="card p-5 space-y-5 animate-fade_in">
       {/* Video Quality */}
@@ -98,6 +111,29 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
             />
           ))}
         </div>
+      </div>
+
+      {/* Audio-only quick actions — one-click extraction to common audio formats */}
+      <div>
+        <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
+          <Music className="h-3 w-3" /> Audio Only
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(['mp3', 'm4a', 'flac', 'ogg'] as Container[]).map((c) => (
+            <button
+              key={c}
+              disabled={loading || formats.length === 0}
+              onClick={() => downloadAudio(c)}
+              className="flex items-center gap-1.5 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2 text-xs font-medium uppercase text-accent transition hover:bg-accent/10 disabled:opacity-40"
+            >
+              <Download className="h-3 w-3" />
+              {c}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[11px] text-muted">
+          One-click extract audio. MP3 is the most compatible; FLAC is lossless.
+        </p>
       </div>
 
       {/* Subtitles — always visible when available */}

@@ -167,7 +167,7 @@ export default function BrowserPage() {
       if (!meta) return
       setPhase('preparing')
       try {
-        const req: DownloadRequest = { url: meta.url, ...params }
+        const req: DownloadRequest = { url: meta.url, title: meta.title, ...params }
         const dlRes = await startDownload(req)
         setPhase('server')
         setProgress({

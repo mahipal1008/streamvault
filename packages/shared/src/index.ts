@@ -77,6 +77,7 @@ export interface DownloadRequest {
   container: Container
   preferredLane?: LaneType
   subtitleFormat?: 'srt' | 'vtt'  // used when videoFormatId === 'subs-only'
+  title?: string  // video title — server uses this (sanitized) as the suggested filename
 }
 
 export interface DownloadResponse {
