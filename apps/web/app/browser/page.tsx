@@ -12,7 +12,7 @@ import { PreviewCard } from '@/components/preview-card'
 import { FormatPicker } from '@/components/format-picker'
 import { DownloadProgress } from '@/components/download-progress'
 import { fetchMeta, startDownload, openProgressStream, API_BASE, prewarmApi } from '@/lib/api'
-import { decryptStream, saveBlob } from '@/lib/crypto'
+import { decryptStreamTo, createFileSink } from '@/lib/crypto'
 import { cn } from '@/lib/utils'
 
 const HOME_PAGE = 'about:blank'
@@ -21,7 +21,7 @@ const HOME_PAGE = 'about:blank'
 // so we keep this list to platforms that either allow embedding or degrade gracefully.
 const QUICK_SITES = [
   { name: 'Vimeo', url: 'https://vimeo.com/' },
-  { name: 'DuckDuckGo', url: 'https://duckduckgo.com/' },
+  { name: 'Dailymotion', url: 'https://www.dailymotion.com/' },
   { name: 'Wikipedia', url: 'https://en.wikipedia.org/' },
   { name: 'Reddit', url: 'https://old.reddit.com/' },
   { name: 'Bandcamp', url: 'https://bandcamp.com/' },
@@ -47,8 +47,13 @@ function normalizeUrl(input: string): string {
   if (!v) return HOME_PAGE
   if (/^https?:\/\//i.test(v)) return v
   if (/^[\w.-]+\.[a-z]{2,}/i.test(v)) return `https://${v}`
-  // Treat as DuckDuckGo search
-  return `https://duckduckgo.com/?q=${encodeURIComponent(v)}`
+  // Search query — can't embed search engines in iframe
+  return `search:${v}`
+}
+
+function isSearchRedirect(url: string): string | null {
+  if (url.startsWith('search:')) return url.slice(7)
+  return null
 }
 
 export default function BrowserPage() {
@@ -61,6 +66,10 @@ export default function BrowserPage() {
   const [shieldsOpen, setShieldsOpen] = useState(false)
   const [shieldStats, setShieldStats] = useState({ ads: 0, trackers: 0, cookies: 0 })
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
+
+  // Iframe blocked detection
+  const [iframeBlocked, setIframeBlocked] = useState(false)
+  const loadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Download modal state
   const [showModal, setShowModal] = useState(false)
@@ -97,9 +106,17 @@ export default function BrowserPage() {
 
   const go = useCallback((raw: string, pushHistory = true) => {
     const next = normalizeUrl(raw)
+    const searchQuery = isSearchRedirect(next)
+    if (searchQuery) {
+      // Search engines block iframes — open DuckDuckGo in a new tab
+      window.open(`https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}`, '_blank', 'noopener,noreferrer')
+      toast.info('Search opened in a new tab — search engines block embedded frames. Copy a video URL from there and paste it here.')
+      return
+    }
     setIframeUrl(next)
     setUrl(next === HOME_PAGE ? '' : next)
     setIframeKey((k) => k + 1)
+    setIframeBlocked(false)
     if (pushHistory) {
       setHistory((h) => {
         const trimmed = h.slice(0, historyIndex + 1)
@@ -192,10 +209,15 @@ export default function BrowserPage() {
 
         setPhase('decrypt')
         setProgress((p) => p ? { ...p, phase: 'decrypt' } : p)
+
+        // Use streaming file sink — writes to disk on Chromium (File System Access API),
+        // falls back to in-memory blob + anchor download on Safari/Firefox/Brave shields.
+        const sink = await createFileSink(dlRes.filename)
+
         const streamRes = await fetch(`${API_BASE}/api/stream/${dlRes.jobId}`)
         if (!streamRes.ok) throw new Error('Stream request failed')
 
-        const blob = await decryptStream(streamRes, dlRes.keyBase64, (bytes) => {
+        await decryptStreamTo(streamRes, dlRes.keyBase64, sink, (bytes) => {
           setProgress((p) => {
             if (!p) return p
             const total = p.totalBytes || bytes
@@ -204,7 +226,6 @@ export default function BrowserPage() {
         })
         setProgress((p) => p ? { ...p, phase: 'done', serverProgress: 100, decryptProgress: 100 } : p)
         setPhase('done')
-        await saveBlob(blob, dlRes.filename)
         toast.success(`Saved: ${dlRes.filename}`)
       } catch (e: unknown) {
         toast.error((e as Error).message || 'Download failed')
@@ -380,9 +401,24 @@ export default function BrowserPage() {
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
               referrerPolicy="no-referrer"
               allow="autoplay; fullscreen; picture-in-picture"
-              onLoad={() => setBlocked(false)}
-              onError={() => setBlocked(true)}
+              onLoad={() => { setBlocked(false); setIframeBlocked(false); if (loadTimer.current) clearTimeout(loadTimer.current) }}
+              onError={() => { setBlocked(true); setIframeBlocked(true) }}
             />
+
+            {/* Iframe-blocked hint — always visible so user knows what to do */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-full bg-surface/90 px-4 py-2 text-xs text-muted backdrop-blur-sm ring-1 ring-[var(--border)] shadow-lg">
+              <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
+              <span>Page not loading? Many sites block embedding.</span>
+              <a
+                href={iframeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-accent hover:underline whitespace-nowrap"
+              >
+                Open externally
+              </a>
+              <span className="text-faint">or paste the video URL above &amp; click Download</span>
+            </div>
 
             {/* Floating Detect & Download FAB on bottom-right */}
             <button
