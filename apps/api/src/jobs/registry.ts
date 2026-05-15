@@ -1,8 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { unlink } from 'node:fs/promises'
 import type { LaneType, JobStatus } from 'streamvault-shared'
-import { deleteKey } from './keystore.js'
-import { config } from '../config.js'
 
 export interface Job {
   id: string
@@ -45,6 +42,8 @@ export function createJob(opts: {
     startTime: Date.now(),
   }
   job.emitter.setMaxListeners(20)
+  // Critical: prevent uncaught EventEmitter 'error' crash when no client is listening.
+  // Explicit listeners added by progress.ts / stream.ts still fire via their own .on/.once registrations.
   job.emitter.on('error', () => {})
   jobs.set(opts.id, job)
   return job
@@ -58,14 +57,12 @@ export function deleteJob(id: string): void {
   const j = jobs.get(id)
   if (j) {
     j.emitter.removeAllListeners()
-    deleteKey(id)
-    if (j.outputPath) unlink(j.outputPath).catch(() => null)
     jobs.delete(id)
   }
 }
 
 setInterval(() => {
-  const ttl = config.JOB_TTL_MS
+  const ttl = 30 * 60 * 1000
   const now = Date.now()
   for (const [id, job] of jobs) {
     if (now - job.startTime > ttl) deleteJob(id)
