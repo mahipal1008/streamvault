@@ -17,6 +17,7 @@ export function encryptChunk(key: Buffer, plaintext: Buffer): Buffer {
 
 export function createEncryptStream(key: Buffer): Transform {
   return new Transform({
+    highWaterMark: 512 * 1024,
     transform(chunk: Buffer, _enc, cb) {
       try {
         this.push(encryptChunk(key, chunk))

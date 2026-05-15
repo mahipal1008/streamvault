@@ -17,7 +17,13 @@ export interface ParsedMeta {
 }
 
 function buildBaseArgs(proxyUrl?: string): string[] {
-  const args = ['--no-playlist', '--no-warnings', '--socket-timeout', '20', '--retries', '2']
+  const args = [
+    '--no-playlist', '--no-warnings',
+    '--socket-timeout', '15', '--retries', '2',
+    '--concurrent-fragments', '4',
+    '--buffer-size', '32K',
+    '--no-part',
+  ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
   return args
 }
@@ -25,7 +31,10 @@ function buildBaseArgs(proxyUrl?: string): string[] {
 function buildIosArgs(proxyUrl?: string): string[] {
   const args = [
     '--no-playlist', '--no-warnings',
-    '--socket-timeout', '20', '--retries', '2',
+    '--socket-timeout', '15', '--retries', '2',
+    '--concurrent-fragments', '4',
+    '--buffer-size', '32K',
+    '--no-part',
     '--extractor-args', 'youtube:player_client=ios,android',
   ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
