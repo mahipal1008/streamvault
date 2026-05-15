@@ -1,5 +1,26 @@
 import type { NextConfig } from 'next'
 
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL
+  ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
+  : 'https://streamvault-api-mows.onrender.com'
+
+// Strict CSP — allows Next.js SSR (unsafe-inline for styles),
+// restricts scripts to same-origin + eval needed by Next.js bundler.
+const csp = [
+  `default-src 'self'`,
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+  `style-src 'self' 'unsafe-inline'`,
+  `img-src 'self' data: blob: https:`,
+  `font-src 'self' data:`,
+  `connect-src 'self' ${API_ORIGIN} wss:`,
+  `media-src 'self' blob:`,
+  `object-src 'none'`,
+  `base-uri 'self'`,
+  `form-action 'self'`,
+  `frame-ancestors 'none'`,
+  `upgrade-insecure-requests`,
+].join('; ')
+
 const config: NextConfig = {
   reactStrictMode: true,
   images: {
@@ -13,6 +34,8 @@ const config: NextConfig = {
       {
         source: '/:path*',
         headers: [
+          { key: 'Content-Security-Policy', value: csp },
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
