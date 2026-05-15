@@ -145,7 +145,7 @@ export default async function downloadRoute(app: FastifyInstance) {
           job.emitter.emit('done', {})
         } else {
           const lastErr = stderrBuf.slice(-600).trim()
-          const botDetected = lastErr.includes('Sign in') || lastErr.includes('bot') || lastErr.includes('Confirm you')
+          const botDetected = lastErr.includes('Sign in') || lastErr.includes('bot') || lastErr.includes('Confirm you') || lastErr.includes('HTTP Error 403') || lastErr.includes('403: Forbidden')
           // Auto-retry YouTube with ios/android fallback if bot-detected and no proxy
           if (botDetected && !proxyUrl && !isSubsOnly) {
             process.stderr.write(`[StreamVault] bot-detected, retrying with ios fallback | ${body.url}\n`)

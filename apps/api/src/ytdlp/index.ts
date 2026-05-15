@@ -16,13 +16,18 @@ export interface ParsedMeta {
   requiresProxy: boolean
 }
 
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+
 function buildBaseArgs(proxyUrl?: string): string[] {
   const args = [
     '--no-playlist', '--no-warnings',
-    '--socket-timeout', '15', '--retries', '2',
+    '--socket-timeout', '15', '--retries', '3',
+    '--extractor-retries', '3',
     '--concurrent-fragments', '4',
     '--buffer-size', '32K',
     '--no-part',
+    '--user-agent', BROWSER_UA,
+    '--add-header', 'Accept-Language:en-US,en;q=0.9',
   ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
   return args
@@ -31,10 +36,13 @@ function buildBaseArgs(proxyUrl?: string): string[] {
 function buildIosArgs(proxyUrl?: string): string[] {
   const args = [
     '--no-playlist', '--no-warnings',
-    '--socket-timeout', '15', '--retries', '2',
+    '--socket-timeout', '15', '--retries', '3',
+    '--extractor-retries', '3',
     '--concurrent-fragments', '4',
     '--buffer-size', '32K',
     '--no-part',
+    '--user-agent', BROWSER_UA,
+    '--add-header', 'Accept-Language:en-US,en;q=0.9',
     '--extractor-args', 'youtube:player_client=ios,android',
   ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
@@ -50,7 +58,9 @@ function isProxyNeeded(stderr: string): boolean {
     stderr.includes('Sign in to confirm') ||
     stderr.includes('bot detection') ||
     stderr.includes('This content isn\'t available') ||
-    stderr.includes('Private video')
+    stderr.includes('Private video') ||
+    stderr.includes('HTTP Error 403') ||
+    stderr.includes('403: Forbidden')
   )
 }
 
@@ -59,7 +69,9 @@ function isBotDetected(stderr: string): boolean {
     stderr.includes('Sign in to confirm') ||
     stderr.includes('bot') ||
     stderr.includes('age-restricted') ||
-    stderr.includes('This video is not available')
+    stderr.includes('This video is not available') ||
+    stderr.includes('HTTP Error 403') ||
+    stderr.includes('403: Forbidden')
   )
 }
 
