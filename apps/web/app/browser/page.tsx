@@ -120,9 +120,19 @@ export default function BrowserPage() {
   const home = () => go(HOME_PAGE, true)
 
   const detectAndDownload = useCallback(async () => {
-    const target = iframeUrl === HOME_PAGE ? url.trim() : iframeUrl
+    // Always prefer the URL-bar value if the user typed something new, otherwise fall back
+    // to whatever the iframe currently shows. This way the button works even when the iframe
+    // refused to render the page (X-Frame-Options) — the user can still paste a video URL.
+    const typed = url.trim()
+    const normalized = typed ? normalizeUrl(typed) : ''
+    const target =
+      typed && normalized !== HOME_PAGE && normalized !== iframeUrl
+        ? normalized
+        : iframeUrl !== HOME_PAGE
+          ? iframeUrl
+          : normalized
     if (!target || target === HOME_PAGE) {
-      toast.error('Open a page first, or type a video URL above.')
+      toast.error('Type or paste a video URL first.')
       return
     }
     setShowModal(true)
