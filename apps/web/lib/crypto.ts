@@ -211,20 +211,28 @@ interface SaveFilePickerWindow {
 export async function createFileSink(filename: string): Promise<DecryptSink & { finalize?: () => Promise<void> }> {
   const w = window as unknown as SaveFilePickerWindow
   if (typeof w.showSaveFilePicker === 'function') {
-    const ext = filename.split('.').pop() ?? 'bin'
-    const handle = await w.showSaveFilePicker({
-      suggestedName: filename,
-      types: [{ description: 'Download', accept: { 'application/octet-stream': [`.${ext}`] } }],
-    })
-    const writable = await handle.createWritable()
-    return {
-      async write(chunk: Uint8Array) { await writable.write(chunk) },
-      async close() { await writable.close() },
-      async abort(reason) { try { await writable.abort?.(reason) } catch {} },
+    try {
+      const ext = filename.split('.').pop() ?? 'bin'
+      const handle = await w.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'Download', accept: { 'application/octet-stream': [`.${ext}`] } }],
+      })
+      const writable = await handle.createWritable()
+      return {
+        async write(chunk: Uint8Array) { await writable.write(chunk) },
+        async close() { await writable.close() },
+        async abort(reason) { try { await writable.abort?.(reason) } catch {} },
+      }
+    } catch (e) {
+      // User explicitly cancelled the save dialog — respect that.
+      if (e instanceof DOMException && e.name === 'AbortError') throw e
+      // Any other failure (gesture expired, API blocked, embedded context, etc.)
+      // → fall through to the in-memory blob approach below.
     }
   }
 
-  // Memory fallback for Firefox/Safari.
+  // Memory fallback — Firefox, Safari, Brave shields, embedded contexts, or
+  // when the File System Access API call fails for any non-user-abort reason.
   const parts: Uint8Array[] = []
   return {
     write(chunk: Uint8Array) { parts.push(chunk) },

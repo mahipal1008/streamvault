@@ -199,12 +199,25 @@ export default function BrowserPage() {
 
         await new Promise<void>((resolve, reject) => {
           const es = openProgressStream(dlRes.jobId)
+          let settled = false
           es.addEventListener('progress', (e) => {
             const d = JSON.parse((e as MessageEvent).data)
             setProgress((p) => p ? { ...p, serverProgress: d.progress, totalBytes: d.total, speed: d.speed } : p)
           })
-          es.addEventListener('done', () => { es.close(); resolve() })
-          es.addEventListener('error', () => { es.close(); reject(new Error('Server failed')) })
+          es.addEventListener('done', () => {
+            if (settled) return; settled = true
+            es.close(); resolve()
+          })
+          es.addEventListener('error', (e) => {
+            if (settled) return; settled = true
+            es.close()
+            if (e instanceof MessageEvent) {
+              try { const d = JSON.parse(e.data); reject(new Error(d.error || 'Download failed on server')) }
+              catch { reject(new Error('Download failed on server')) }
+            } else {
+              reject(new Error('Connection to server lost — try again'))
+            }
+          })
         })
 
         setPhase('decrypt')
