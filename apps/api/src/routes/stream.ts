@@ -41,6 +41,8 @@ export default async function streamRoute(app: FastifyInstance) {
       const fileStream = await streamFile(job.outputPath)
       const encStream = createEncryptStream(key)
 
+      // Manually add CORS headers because reply.raw.writeHead bypasses the @fastify/cors plugin
+      const origin = (req.headers.origin as string | undefined) ?? '*'
       reply.raw.writeHead(200, {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${encodeURIComponent(job.filename)}"`,
@@ -50,6 +52,9 @@ export default async function streamRoute(app: FastifyInstance) {
         'X-Encrypted': 'aes-256-gcm',
         'Cache-Control': 'no-store, no-cache',
         'X-Content-Type-Options': 'nosniff',
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Expose-Headers': 'X-Job-Id, X-Original-Size, X-Filename, X-Encrypted, Content-Disposition',
+        'Vary': 'Origin',
       })
 
       fileStream.pipe(encStream).pipe(reply.raw)
