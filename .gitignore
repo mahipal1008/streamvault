@@ -13,3 +13,7 @@ Thumbs.db
 coverage/
 tmp/
 .cache/
+
+headers.txt
+response.txt
+
