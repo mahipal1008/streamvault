@@ -2,6 +2,9 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
+import { tmpdir } from 'node:os'
+import { readdirSync, unlinkSync } from 'node:fs'
+import { join } from 'node:path'
 import { config } from './config.js'
 import metaRoute from './routes/meta.js'
 import downloadRoute from './routes/download.js'
@@ -9,6 +12,24 @@ import streamRoute from './routes/stream.js'
 import progressRoute from './routes/progress.js'
 import sitesRoute from './routes/sites.js'
 import healthRoute from './routes/health.js'
+
+// Prevent server crashes from uncaught errors
+process.on('uncaughtException', (err) => {
+  process.stderr.write(`[StreamVault] uncaught: ${err.message}\n`)
+})
+process.on('unhandledRejection', (err: any) => {
+  process.stderr.write(`[StreamVault] rejection: ${err?.message ?? err}\n`)
+})
+
+// Clean leftover temp files from previous runs
+try {
+  const tmp = tmpdir()
+  for (const f of readdirSync(tmp)) {
+    if (f.startsWith('sv_')) {
+      try { unlinkSync(join(tmp, f)) } catch {}
+    }
+  }
+} catch {}
 
 const app = Fastify({
   logger: { level: 'silent' },
@@ -33,7 +54,7 @@ await app.register(cors, {
 
 await app.register(rateLimit, {
   global: true,
-  max: 120,
+  max: 300,
   timeWindow: '15 minutes',
   keyGenerator: () => 'global',
 })
