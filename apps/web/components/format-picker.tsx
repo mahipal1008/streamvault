@@ -264,7 +264,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
           className={cn(
             'flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-200',
             selectedFormat && !loading
-              ? 'bg-accent text-black hover:scale-[1.02] glow'
+              ? 'bg-accent text-white dark:text-black hover:scale-[1.02] glow'
               : 'cursor-not-allowed bg-surface-2 text-faint ring-1 ring-[var(--border)]'
           )}
         >

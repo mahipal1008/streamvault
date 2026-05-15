@@ -1,64 +1,64 @@
 import type { FastifyInstance } from 'fastify'
 import { getJob } from '../jobs/registry.js'
+import { config } from '../config.js'
 
 export default async function progressRoute(app: FastifyInstance) {
   app.get<{ Params: { jobId: string } }>('/progress/:jobId', async (req, reply) => {
     const { jobId } = req.params
+    if (!/^[0-9a-f-]{36}$/.test(jobId)) return reply.status(400).send({ error: 'Invalid jobId' })
     const job = getJob(jobId)
-
     if (!job) return reply.status(404).send({ error: 'Job not found' })
+
+    const origin = req.headers.origin as string | undefined
+    const allowOrigin =
+      origin && (config.ALLOWED_ORIGIN === '*' || origin === config.ALLOWED_ORIGIN)
+        ? origin
+        : config.ALLOWED_ORIGIN === '*'
+          ? '*'
+          : config.ALLOWED_ORIGIN
 
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowOrigin,
+      Vary: 'Origin',
     })
 
     const send = (event: string, data: object) => {
-      reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+      if (!reply.raw.writableEnded) {
+        reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+      }
     }
 
     const onProgress = (d: { progress: number; received: number; speed: number; status: string }) => {
       send('progress', {
-        jobId,
-        progress: d.progress,
-        received: d.received,
-        total: job.total,
-        speed: d.speed,
-        lane: job.lane,
-        status: d.status,
+        jobId, progress: d.progress, received: d.received, total: job.total,
+        speed: d.speed, lane: job.lane, status: d.status,
       })
     }
-
-    const onDone = () => {
-      send('done', { jobId, status: 'done', progress: 100, lane: job.lane })
-      reply.raw.end()
-    }
-
-    const onError = (d: { error: string }) => {
-      send('error', { jobId, status: 'error', error: d.error })
-      reply.raw.end()
-    }
+    const onDone = () => { send('done', { jobId, status: 'done', progress: 100, lane: job.lane }); reply.raw.end() }
+    const onError = (d: { error: string }) => { send('error', { jobId, status: 'error', error: d.error }); reply.raw.end() }
 
     const keepalive = setInterval(() => {
       if (!reply.raw.writableEnded) reply.raw.write(': ping\n\n')
     }, 15_000)
 
-    job.emitter.on('progress', onProgress)
-    job.emitter.once('done', onDone)
-    job.emitter.once('error', onError)
-
-    if (job.status === 'done') { onDone(); clearInterval(keepalive); return }
-    if (job.status === 'error') { onError({ error: 'Job already failed' }); clearInterval(keepalive); return }
-
-    req.raw.on('close', () => {
+    const cleanup = () => {
       clearInterval(keepalive)
       job.emitter.off('progress', onProgress)
       job.emitter.off('done', onDone)
       job.emitter.off('error', onError)
-    })
+    }
+    req.raw.on('close', cleanup)
+
+    if (job.status === 'done') { onDone(); cleanup(); return reply.hijack() }
+    if (job.status === 'error') { onError({ error: 'Job already failed' }); cleanup(); return reply.hijack() }
+
+    job.emitter.on('progress', onProgress)
+    job.emitter.once('done', onDone)
+    job.emitter.once('error', onError)
 
     reply.hijack()
   })

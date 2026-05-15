@@ -4,8 +4,10 @@ import type { Readable } from 'node:stream'
 
 export async function streamFile(filePath: string): Promise<Readable> {
   const stream = createReadStream(filePath, { highWaterMark: 64 * 1024 })
-  stream.on('end', () => unlink(filePath).catch(() => null))
-  stream.on('error', () => unlink(filePath).catch(() => null))
+  const cleanup = () => unlink(filePath).catch(() => null)
+  stream.on('end', cleanup)
+  stream.on('error', cleanup)
+  stream.on('close', cleanup)
   return stream
 }
 

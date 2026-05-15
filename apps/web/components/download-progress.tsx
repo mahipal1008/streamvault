@@ -55,7 +55,15 @@ export function DownloadProgress({
         </div>
       </div>
 
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-surface-2">
+      <div
+        className="relative h-2 w-full overflow-hidden rounded-full bg-surface-2"
+        role="progressbar"
+        aria-label={phase === 'server' ? 'Server download progress' : phase === 'decrypt' ? 'Decryption progress' : 'Download complete'}
+        aria-valuenow={Math.round(displayProgress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-live="polite"
+      >
         <div
           className={cn(
             'absolute inset-y-0 left-0 rounded-full transition-all duration-300',

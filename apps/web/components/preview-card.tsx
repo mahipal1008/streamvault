@@ -38,6 +38,7 @@ export function PreviewCard({ meta, lane, url }: Props) {
               src={meta.thumbnail}
               alt={meta.title ?? 'Thumbnail'}
               fill
+              sizes="(max-width: 640px) 160px, 192px"
               className="object-cover"
               unoptimized
             />

@@ -8,11 +8,22 @@ import { Footer } from '@/components/footer'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://streamvault-web.onrender.com'),
   title: { default: 'StreamVault — Download Anything, Instantly', template: '%s | StreamVault' },
   description: 'Download video, audio, images and documents from 1000+ platforms in ultra-HD up to 8K. Privacy-first, zero data stored, AES-256-GCM encrypted.',
   keywords: ['video downloader', 'youtube downloader', 'audio downloader', 'tiktok downloader', 'instagram downloader', 'privacy', 'secure'],
-  robots: 'noindex, nofollow',
   icons: { icon: '/favicon.svg' },
+  openGraph: {
+    title: 'StreamVault — Download Anything, Instantly',
+    description: 'Ultra-HD video, audio and documents from 1000+ platforms. Privacy-first, end-to-end encrypted.',
+    siteName: 'StreamVault',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'StreamVault — Download Anything, Instantly',
+    description: 'Ultra-HD video, audio and documents from 1000+ platforms.',
+  },
 }
 
 export const viewport: Viewport = {
@@ -23,16 +34,14 @@ export const viewport: Viewport = {
   colorScheme: 'light dark',
 }
 
-// Inline script to prevent flash of wrong theme
+// Inline script to prevent flash of wrong theme. Default is dark.
 const themeScript = `
 (function(){
   try {
-    var t = localStorage.getItem('sv-theme') || 'system';
-    var d = t === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : t;
+    var t = localStorage.getItem('sv-theme');
+    var d = (t === 'light') ? 'light' : 'dark';
     document.documentElement.classList.add(d);
-  } catch(e){}
+  } catch(e){ document.documentElement.classList.add('dark'); }
 })();
 `
 

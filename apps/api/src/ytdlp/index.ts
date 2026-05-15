@@ -17,7 +17,7 @@ export interface ParsedMeta {
 }
 
 function buildBaseArgs(proxyUrl?: string): string[] {
-  const args = ['--no-playlist', '--no-warnings']
+  const args = ['--no-playlist', '--no-warnings', '--socket-timeout', '20', '--retries', '2']
   if (proxyUrl) args.push('--proxy', proxyUrl)
   return args
 }
@@ -25,7 +25,7 @@ function buildBaseArgs(proxyUrl?: string): string[] {
 function buildIosArgs(proxyUrl?: string): string[] {
   const args = [
     '--no-playlist', '--no-warnings',
-    // Fallback: ios+android clients bypass bot detection but return limited formats
+    '--socket-timeout', '20', '--retries', '2',
     '--extractor-args', 'youtube:player_client=ios,android',
   ]
   if (proxyUrl) args.push('--proxy', proxyUrl)
@@ -113,7 +113,7 @@ function parseYtdlpOutput(stdout: string): ParsedMeta {
       viewCount: raw.view_count,
       uploadDate: raw.upload_date,
       platform: raw.extractor_key ?? raw.extractor ?? 'Unknown',
-      formats: parseFormats(raw.formats ?? []),
+      formats: parseFormats(raw.formats ?? [], raw.duration ?? 0),
       audioTracks: parseAudioTracks(raw.formats ?? []),
       subtitles: parseSubtitles(raw.subtitles ?? {}, raw.automatic_captions ?? {}),
       requiresProxy: false,

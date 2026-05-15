@@ -2,79 +2,70 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 
-type Theme = 'light' | 'dark' | 'system'
+type Theme = 'light' | 'dark'
 
 interface ThemeContextType {
   theme: Theme
-  resolvedTheme: 'light' | 'dark'
+  resolvedTheme: Theme
   setTheme: (theme: Theme) => void
+  toggleTheme: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'system',
+  theme: 'dark',
   resolvedTheme: 'dark',
   setTheme: () => {},
+  toggleTheme: () => {},
 })
 
 export function useTheme() {
   return useContext(ThemeContext)
 }
 
-function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'dark'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system')
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark')
+  const [theme, setThemeState] = useState<Theme>('dark')
   const [mounted, setMounted] = useState(false)
 
   const applyTheme = useCallback((t: Theme) => {
-    const resolved = t === 'system' ? getSystemTheme() : t
-    setResolvedTheme(resolved)
     const root = document.documentElement
     root.classList.remove('light', 'dark')
-    root.classList.add(resolved)
-
-    // Update meta theme-color
+    root.classList.add(t)
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', resolved === 'dark' ? '#0a0a0b' : '#ffffff')
+    if (meta) meta.setAttribute('content', t === 'dark' ? '#0a0a0b' : '#ffffff')
   }, [])
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t)
-    localStorage.setItem('sv-theme', t)
+    try { localStorage.setItem('sv-theme', t) } catch {}
     applyTheme(t)
   }, [applyTheme])
 
-  useEffect(() => {
-    const stored = localStorage.getItem('sv-theme') as Theme | null
-    const initial = stored ?? 'system'
-    setThemeState(initial)
-    applyTheme(initial)
-    setMounted(true)
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }, [theme, setTheme])
 
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = () => {
-      const current = localStorage.getItem('sv-theme') as Theme | null
-      if (!current || current === 'system') applyTheme('system')
-    }
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
+  useEffect(() => {
+    let stored: Theme = 'dark'
+    try {
+      const raw = localStorage.getItem('sv-theme')
+      // Default dark; migrate any prior 'system' or invalid value to 'dark'
+      stored = raw === 'light' ? 'light' : 'dark'
+    } catch {}
+    setThemeState(stored)
+    applyTheme(stored)
+    setMounted(true)
   }, [applyTheme])
 
-  // Prevent flash of wrong theme
   if (!mounted) {
     return (
-      <ThemeContext.Provider value={{ theme: 'system', resolvedTheme: 'dark', setTheme }}>
+      <ThemeContext.Provider value={{ theme: 'dark', resolvedTheme: 'dark', setTheme, toggleTheme }}>
         {children}
       </ThemeContext.Provider>
     )
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme: theme, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )

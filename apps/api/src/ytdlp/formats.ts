@@ -43,10 +43,17 @@ function heightToLabel(h: number, dr?: string): string {
   return '144p'
 }
 
-export function parseFormats(rawFormats: unknown[]): VideoFormat[] {
+export function parseFormats(rawFormats: unknown[], durationSec = 0): VideoFormat[] {
   const fmts = rawFormats as RawFormat[]
   const seen = new Set<string>()
   const result: VideoFormat[] = []
+
+  // Compute filesize fallback from (bitrate_kbps * 1000 / 8) * duration_s, when filesize is missing.
+  // Bitrate keys vary: tbr (total), vbr (video), abr (audio). Use whichever is present.
+  const estimateBytes = (bitrateKbps?: number): number | undefined => {
+    if (!bitrateKbps || bitrateKbps <= 0 || durationSec <= 0) return undefined
+    return Math.round((bitrateKbps * 1000 / 8) * durationSec)
+  }
 
   const videoFmts = fmts
     .filter((f) => f.vcodec && f.vcodec !== 'none' && f.height && f.height > 0)
@@ -56,6 +63,8 @@ export function parseFormats(rawFormats: unknown[]): VideoFormat[] {
     const label = heightToLabel(f.height!, f.dynamic_range)
     if (seen.has(label)) continue
     seen.add(label)
+    // For merged video+audio downloads, combine video and best audio bitrate when we lack filesize
+    const combinedBr = (f.vbr ?? f.tbr ?? 0) + (f.acodec && f.acodec !== 'none' ? (f.abr ?? 0) : 128)
     result.push({
       id: f.format_id,
       qualityLabel: label as VideoFormat['qualityLabel'],
@@ -64,7 +73,7 @@ export function parseFormats(rawFormats: unknown[]): VideoFormat[] {
       vcodec: f.vcodec ?? '',
       acodec: f.acodec ?? '',
       ext: f.ext,
-      filesize: f.filesize ?? f.filesize_approx,
+      filesize: f.filesize ?? f.filesize_approx ?? estimateBytes(combinedBr || f.tbr),
       hdr: !!(f.dynamic_range && f.dynamic_range !== 'SDR'),
       hasAudio: !!(f.acodec && f.acodec !== 'none'),
       isAudioOnly: false,
@@ -84,7 +93,7 @@ export function parseFormats(rawFormats: unknown[]): VideoFormat[] {
       vcodec: 'none',
       acodec: audioOnly.acodec ?? 'aac',
       ext: audioOnly.ext,
-      filesize: audioOnly.filesize ?? audioOnly.filesize_approx,
+      filesize: audioOnly.filesize ?? audioOnly.filesize_approx ?? estimateBytes(audioOnly.abr ?? audioOnly.tbr),
       hdr: false,
       hasAudio: true,
       isAudioOnly: true,

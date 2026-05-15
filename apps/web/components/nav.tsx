@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Shield, BookOpen, Menu, X, Download, HelpCircle, Sun, Moon, Monitor, ChevronDown, Info, FileText, Globe } from 'lucide-react'
+import { Shield, BookOpen, Menu, X, Download, HelpCircle, Sun, Moon, Info, Globe, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/components/theme-provider'
 
@@ -12,53 +12,22 @@ const NAV_LINKS = [
   { href: '/supported-sites', label: 'Platforms', icon: BookOpen },
   { href: '/how-it-works', label: 'How It Works', icon: Info },
   { href: '/security', label: 'Security', icon: Shield },
+  { href: '/support', label: 'Support', icon: LifeBuoy },
   { href: '/faq', label: 'FAQ', icon: HelpCircle },
 ]
 
 function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
-  const [open, setOpen] = useState(false)
-
-  const options = [
-    { value: 'light' as const, icon: Sun, label: 'Light' },
-    { value: 'dark' as const, icon: Moon, label: 'Dark' },
-    { value: 'system' as const, icon: Monitor, label: 'System' },
-  ]
-
-  const current = options.find(o => o.value === theme) ?? options[2]
-
+  const { theme, toggleTheme } = useTheme()
+  const Icon = theme === 'dark' ? Moon : Sun
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-surface text-muted transition-all hover:text-primary hover:border-[var(--border-strong)] hover:shadow-sm"
-        aria-label="Toggle theme"
-      >
-        <current.icon className="h-4 w-4" />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-2 w-36 overflow-hidden rounded-xl border border-[var(--border)] bg-surface shadow-lg">
-            {options.map(({ value, icon: Icon, label }) => (
-              <button
-                key={value}
-                onClick={() => { setTheme(value); setOpen(false) }}
-                className={cn(
-                  'flex w-full items-center gap-2.5 px-3 py-2.5 text-sm transition-colors',
-                  theme === value
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-muted hover:bg-surface-2 hover:text-primary'
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    <button
+      onClick={toggleTheme}
+      className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] bg-surface text-muted transition-all hover:text-primary hover:border-[var(--border-strong)] hover:shadow-sm"
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+    >
+      <Icon className="h-4 w-4" />
+    </button>
   )
 }
 

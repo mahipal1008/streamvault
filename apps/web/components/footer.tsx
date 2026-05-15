@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Shield, ExternalLink, Download, Heart } from 'lucide-react'
+import { Shield, Download, Heart } from 'lucide-react'
 
 const PRODUCT_LINKS = [
   { href: '/', label: 'Downloader' },
@@ -91,11 +91,6 @@ export function Footer() {
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-faint sm:flex-row">
           <p>© {new Date().getFullYear()} StreamVault. All rights reserved. Personal use only.</p>
           <div className="flex items-center gap-4">
-            <p className="flex items-center gap-1">
-              <ExternalLink className="h-3 w-3" />
-              Powered by yt-dlp + ffmpeg
-            </p>
-            <span className="hidden sm:inline">·</span>
             <p className="flex items-center gap-1">
               Built with <Heart className="h-3 w-3 text-error" /> for privacy
             </p>

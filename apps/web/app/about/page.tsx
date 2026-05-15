@@ -33,7 +33,7 @@ const DIFFERENTIATORS = [
 const TECH = [
   { label: 'yt-dlp', desc: 'Media extraction from 1 000+ sites' },
   { label: 'ffmpeg', desc: 'Format conversion and audio/video muxing' },
-  { label: 'Next.js 14', desc: 'React framework for the web interface' },
+  { label: 'Next.js 15', desc: 'React framework for the web interface' },
   { label: 'Fastify', desc: 'High-performance API server' },
   { label: 'AES-256-GCM', desc: 'Military-grade authenticated encryption' },
   { label: 'Web Crypto API', desc: 'Browser-native client-side decryption' },

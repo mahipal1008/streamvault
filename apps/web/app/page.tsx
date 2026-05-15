@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { VideoMetadata, DownloadRequest, SubtitleMode, Container } from 'streamvault-shared'
@@ -8,14 +8,14 @@ import { UrlInput } from '@/components/url-input'
 import { PreviewCard } from '@/components/preview-card'
 import { FormatPicker } from '@/components/format-picker'
 import { DownloadProgress } from '@/components/download-progress'
-import { fetchMeta, startDownload, openProgressStream, API_BASE } from '@/lib/api'
-import { decryptStream, saveBlob } from '@/lib/crypto'
+import { fetchMeta, startDownload, openProgressStream, API_BASE, prewarmApi } from '@/lib/api'
+import { decryptStreamTo, createFileSink } from '@/lib/crypto'
 import {
   Shield, Zap, Lock, Globe, ArrowRight, CheckCircle2, XCircle,
   Download, Monitor, Smartphone, Headphones, FileVideo, Subtitles,
-  Star, Users, BarChart3, Play, ChevronRight, EyeOff, Languages,
+  Users, BarChart3, Play, ChevronRight, EyeOff, Languages,
   Sparkles, Gauge, Infinity as InfinityIcon, MousePointerClick,
-  Film, Music2, Mic2, Image as ImageIcon, FileText
+  Film, Music2, Mic2, Image as ImageIcon, FileText, Star
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -100,17 +100,23 @@ const FAQS = [
 ]
 
 const TESTIMONIALS = [
-  { name: 'Aarav K.', role: 'Filmmaker', text: 'Finally a downloader that gives me real 4K HDR with Dolby Vision intact. MKV + multi-audio is chef’s kiss.' },
-  { name: 'Luna R.', role: 'Translator', text: 'The sidecar .srt download alone is worth bookmarking this site forever.' },
-  { name: 'Marcus T.', role: 'Privacy nerd', text: 'No accounts, end-to-end encrypted, no ads. This is what the internet should feel like.' },
+  { name: 'Priya S.', role: 'Researcher', quote: 'I download lecture videos from a dozen platforms — StreamVault is the only one that handles every single source without nagging me to sign up.' },
+  { name: 'Marcus T.', role: 'Video editor', quote: 'The 4K HDR pipeline is flawless. Multi-audio MKV exports just work. The encrypted download is a chef\u2019s kiss for client work.' },
+  { name: 'Aisha R.', role: 'Student', quote: 'I love that there are zero ads. Paste the link, hit download, done. The subtitle .srt option saved my thesis.' },
 ]
 
 export default function HomePage() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [meta, setMeta] = useState<VideoMetadata | null>(null)
   const [progress, setProgress] = useState<ProgressState | null>(null)
-  const [jobId, setJobId] = useState('')
-  const [keyBase64, setKeyBase64] = useState('')
+  // Keep AES key out of React state so it cannot be inspected in devtools/devtools-time-travel.
+  const keyRef = useRef<string>('')
+  const jobIdRef = useRef<string>('')
+  const [lastParams, setLastParams] = useState<DownloadRequest | null>(null)
+
+  // Pre-warm the API to defeat Render free-tier cold-start latency.
+  // Runs once on mount; failures are silently retried on next call.
+  useEffect(() => { prewarmApi() }, [])
 
   const handleAnalyze = useCallback(async (url: string) => {
     setPhase('loading')
@@ -129,12 +135,13 @@ export default function HomePage() {
     async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: Container; subtitleFormat?: 'srt' | 'vtt' }) => {
       if (!meta) return
       setPhase('preparing')
+      const req: DownloadRequest = { url: meta.url, ...params }
+      setLastParams(req)
 
       try {
-        const req: DownloadRequest = { url: meta.url, ...params }
         const dlRes = await startDownload(req)
-        setJobId(dlRes.jobId)
-        setKeyBase64(dlRes.keyBase64)
+        jobIdRef.current = dlRes.jobId
+        keyRef.current = dlRes.keyBase64
         setPhase('server')
 
         setProgress({
@@ -147,25 +154,26 @@ export default function HomePage() {
           lane: dlRes.lane,
         })
 
-        const waitProgress = new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
           const es = openProgressStream(dlRes.jobId)
           es.addEventListener('progress', (e) => {
             const d = JSON.parse((e as MessageEvent).data)
             setProgress((prev) => prev ? { ...prev, serverProgress: d.progress, totalBytes: d.total, speed: d.speed } : prev)
           })
           es.addEventListener('done', () => { es.close(); resolve() })
-          es.addEventListener('error', (e) => { es.close(); reject(new Error('Download failed on server')) })
+          es.addEventListener('error', () => { es.close(); reject(new Error('Download failed on server')) })
         })
-
-        await waitProgress
 
         setPhase('decrypt')
         setProgress((prev) => prev ? { ...prev, phase: 'decrypt' } : prev)
 
+        // Open file sink BEFORE fetching — File System Access API requires a user gesture context.
+        const sink = await createFileSink(dlRes.filename)
+
         const streamRes = await fetch(`${API_BASE}/api/stream/${dlRes.jobId}`)
         if (!streamRes.ok) throw new Error('Stream request failed')
 
-        const blob = await decryptStream(streamRes, dlRes.keyBase64, (bytes) => {
+        await decryptStreamTo(streamRes, dlRes.keyBase64, sink, (bytes) => {
           setProgress((prev) => {
             if (!prev) return prev
             const total = prev.totalBytes || bytes
@@ -173,17 +181,26 @@ export default function HomePage() {
           })
         })
 
+        // Burn the in-memory key reference.
+        keyRef.current = ''
+        jobIdRef.current = ''
+
         setProgress((prev) => prev ? { ...prev, phase: 'done', serverProgress: 100, decryptProgress: 100 } : prev)
         setPhase('done')
-        await saveBlob(blob, dlRes.filename)
         toast.success(`Saved: ${dlRes.filename}`)
       } catch (e: unknown) {
+        keyRef.current = ''
+        jobIdRef.current = ''
         toast.error((e as Error).message || 'Download failed')
         setPhase('preview')
       }
     },
     [meta]
   )
+
+  const retry = useCallback(() => {
+    if (lastParams) handleDownload(lastParams)
+  }, [lastParams, handleDownload])
 
   return (
     <div className="relative">
@@ -258,6 +275,14 @@ export default function HomePage() {
             <motion.div key="preview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
               <PreviewCard meta={meta} lane={meta.lane} url={meta.url} />
               <FormatPicker meta={meta} onDownload={handleDownload} loading={false} />
+              {lastParams && (
+                <button
+                  onClick={retry}
+                  className="w-full rounded-xl bg-surface py-3 text-sm text-muted border border-[var(--border)] transition hover:border-[var(--border-strong)] hover:text-primary"
+                >
+                  Retry last download
+                </button>
+              )}
             </motion.div>
           )}
 
@@ -484,7 +509,7 @@ export default function HomePage() {
                   <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                 ))}
               </div>
-              <p className="text-sm leading-relaxed text-secondary">“{t.text}”</p>
+              <p className="text-sm leading-relaxed text-secondary">“{t.quote}”</p>
               <div className="mt-4 border-t border-[var(--border)] pt-3">
                 <p className="text-sm font-semibold text-primary">{t.name}</p>
                 <p className="text-xs text-faint">{t.role}</p>

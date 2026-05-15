@@ -4,11 +4,13 @@ const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL
   ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
   : 'https://streamvault-api-mows.onrender.com'
 
-// Strict CSP — allows Next.js SSR (unsafe-inline for styles),
-// restricts scripts to same-origin + eval needed by Next.js bundler.
+const isProd = process.env.NODE_ENV === 'production'
+
+// Strict CSP. 'unsafe-eval' is only required for Next dev HMR; dropped in prod.
+// 'unsafe-inline' remains for styles (Tailwind) and the FOUC theme script.
 const csp = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+  `script-src 'self' 'unsafe-inline'${isProd ? '' : " 'unsafe-eval'"}`,
   `style-src 'self' 'unsafe-inline'`,
   `img-src 'self' data: blob: https:`,
   `font-src 'self' data:`,
@@ -25,6 +27,7 @@ const csp = [
 
 const config: NextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
@@ -40,7 +43,6 @@ const config: NextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
