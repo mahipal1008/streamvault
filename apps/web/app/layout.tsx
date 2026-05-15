@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Toaster } from 'sonner'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Nav } from '@/components/nav'
 import { Footer } from '@/components/footer'
 import './globals.css'
@@ -15,33 +16,51 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#080808',
-  colorScheme: 'dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0b' },
+  ],
+  colorScheme: 'light dark',
 }
+
+// Inline script to prevent flash of wrong theme
+const themeScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('sv-theme') || 'system';
+    var d = t === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : t;
+    document.documentElement.classList.add(d);
+  } catch(e){}
+})();
+`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} dark`} suppressHydrationWarning>
-      <body className="bg-background text-primary antialiased">
-        <div className="relative min-h-dvh flex flex-col">
-          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
-            <div className="absolute -top-[30%] left-[10%] h-[700px] w-[700px] rounded-full bg-[#00d4ff08] blur-[180px]" />
-            <div className="absolute top-[50%] right-[-10%] h-[500px] w-[500px] rounded-full bg-[#00ff8806] blur-[160px]" />
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="bg-background text-primary antialiased transition-colors duration-200">
+        <ThemeProvider>
+          <div className="relative min-h-dvh flex flex-col">
+            {/* Background ambient blobs */}
+            <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
+              <div className="absolute -top-[30%] left-[10%] h-[700px] w-[700px] rounded-full blur-[180px]" style={{ background: 'var(--hero-blob-1)' }} />
+              <div className="absolute top-[50%] right-[-10%] h-[500px] w-[500px] rounded-full blur-[160px]" style={{ background: 'var(--hero-blob-2)' }} />
+            </div>
+            <Nav />
+            <main className="relative z-10 flex-1">{children}</main>
+            <Footer />
           </div>
-          <Nav />
-          <main className="relative z-10 flex-1">{children}</main>
-          <Footer />
-        </div>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#1a1a1a',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#f0f0f0',
-            },
-          }}
-        />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              className: '!bg-surface !border !border-[var(--border)] !text-primary !shadow-md',
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   )

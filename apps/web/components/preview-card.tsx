@@ -19,7 +19,7 @@ interface Props {
 
 function StatPill({ icon: Icon, value }: { icon: React.ElementType; value: string }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-muted ring-1 ring-white/5">
+    <div className="flex items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-muted border border-[var(--border)]">
       <Icon className="h-3.5 w-3.5 flex-shrink-0" />
       <span className="truncate">{value}</span>
     </div>
@@ -30,7 +30,7 @@ export function PreviewCard({ meta, lane, url }: Props) {
   const laneStyle = LANE_COLORS[lane as keyof typeof LANE_COLORS] ?? LANE_COLORS.direct
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-surface overflow-hidden animate-fade_in">
+    <div className="card overflow-hidden animate-fade_in">
       <div className="flex gap-4 p-4 sm:gap-5 sm:p-5">
         {meta.thumbnail && (
           <div className="relative h-24 w-40 flex-shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-48">
@@ -69,7 +69,7 @@ export function PreviewCard({ meta, lane, url }: Props) {
 
           <div className="mt-2 flex flex-wrap gap-2">
             {meta.viewCount != null && (
-              <StatPill icon={Eye} value={Intl.NumberFormat('en', { notation: 'compact' }).format(meta.viewCount)} />
+                      <StatPill icon={Eye} value={Intl.NumberFormat('en', { notation: 'compact' }).format(meta.viewCount)} />
             )}
             {meta.duration && (
               <StatPill icon={Clock} value={formatDuration(meta.duration)} />
@@ -81,7 +81,7 @@ export function PreviewCard({ meta, lane, url }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-white/5 px-5 py-3">
+      <div className="flex items-center justify-between border-t border-[var(--border)] px-5 py-3">
         <div className="flex items-center gap-2">
           <div className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium', laneStyle.bg, laneStyle.text)}>
             <span className={cn('h-1.5 w-1.5 rounded-full animate-pulse_dot', laneStyle.dot)} />

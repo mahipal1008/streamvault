@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { Shield, Lock, Database, Eye, Server, Key } from 'lucide-react'
+import { Shield, Lock, Database, Eye, Server, Key, CheckCircle2, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
 export const metadata: Metadata = { title: 'Security & Privacy' }
 
@@ -38,34 +39,55 @@ const POINTS = [
 
 export default function SecurityPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
-      <div className="mb-10 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-accent/20">
-          <Shield className="h-7 w-7 text-accent" />
+    <div className="mx-auto max-w-3xl px-4 py-16 lg:py-20">
+      <div className="mb-12 text-center">
+        <span className="badge mb-4">Enterprise Grade</span>
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] shadow-glow">
+          <Shield className="h-8 w-8 text-accent" />
         </div>
-        <h1 className="mb-3 text-3xl font-bold">Security & Privacy</h1>
-        <p className="text-muted">How StreamVault protects you and your data — technically and operationally.</p>
+        <h1 className="mb-3 text-3xl font-bold sm:text-4xl">Security & Privacy</h1>
+        <p className="mx-auto max-w-lg text-muted">
+          How StreamVault protects you and your data — technically and operationally.
+        </p>
       </div>
 
       <div className="space-y-4">
         {POINTS.map(({ icon: Icon, title, desc }) => (
-          <div key={title} className="rounded-2xl border border-white/8 bg-surface p-5">
+          <div key={title} className="card p-6 group">
             <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-accent/10">
-                <Icon className="h-4.5 w-4.5 text-accent" />
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--accent-subtle)] transition-transform group-hover:scale-110">
+                <Icon className="h-5 w-5 text-accent" />
               </div>
-              <h2 className="text-sm font-semibold text-primary">{title}</h2>
+              <h2 className="text-base font-semibold text-primary">{title}</h2>
             </div>
-            <p className="pl-12 text-sm leading-relaxed text-muted">{desc}</p>
+            <p className="pl-[52px] text-sm leading-relaxed text-muted">{desc}</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-success/20 bg-success/5 p-5">
-        <p className="text-sm font-semibold text-success">Open Source Transparency</p>
-        <p className="mt-1 text-sm text-muted">
-          This project is built on open-source components: yt-dlp, ffmpeg, Fastify, Next.js. The encryption logic is standard AES-GCM — you can audit it in your browser devtools.
-        </p>
+      <div className="mt-10 card overflow-hidden">
+        <div className="bg-[var(--success-bg)] p-6">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-success" />
+            <div>
+              <p className="text-sm font-semibold text-success">Open Source Transparency</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted">
+                This project is built on open-source components: yt-dlp, ffmpeg, Fastify, Next.js.
+                The encryption logic is standard AES-GCM — you can audit it in your browser devtools.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 text-center">
+        <Link
+          href="/privacy"
+          className="inline-flex items-center gap-2 text-sm text-accent hover:underline"
+        >
+          Read our Privacy Policy
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
     </div>
   )

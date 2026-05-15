@@ -14,6 +14,8 @@ const csp = [
   `font-src 'self' data:`,
   `connect-src 'self' ${API_ORIGIN} wss:`,
   `media-src 'self' blob:`,
+  `frame-src https:`,
+  `child-src https:`,
   `object-src 'none'`,
   `base-uri 'self'`,
   `form-action 'self'`,

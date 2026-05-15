@@ -1,37 +1,83 @@
 import type { Metadata } from 'next'
+import { Scale, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
-export const metadata: Metadata = { title: 'Legal' }
+export const metadata: Metadata = { title: 'Legal Disclaimer' }
+
+const SECTIONS = [
+  {
+    title: 'Personal Use Only',
+    text: 'StreamVault is a personal tool intended for downloading content you have the legal right to download — such as your own uploads, content under Creative Commons or other open licenses, or content where the platform explicitly permits downloading.',
+  },
+  {
+    title: 'Copyright',
+    text: "Downloading copyrighted content without the copyright holder's permission may violate copyright law in your jurisdiction. You are solely responsible for ensuring your use of this tool complies with applicable laws and the terms of service of the platforms you access.",
+  },
+  {
+    title: 'No Warranty',
+    text: 'This software is provided "as is" without warranty of any kind. We make no guarantees about availability, accuracy, or fitness for any particular purpose.',
+  },
+  {
+    title: 'Privacy',
+    text: 'We do not collect, store, or share any personal data.',
+    link: { href: '/security', label: 'See our Security page for full details' },
+  },
+  {
+    title: 'DMCA',
+    text: 'StreamVault does not host or cache any content. It acts as a client-side tool to interface with publicly available streaming protocols. We are not responsible for the content accessed through this tool.',
+  },
+]
 
 export default function LegalPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16 prose prose-invert prose-sm max-w-none">
-      <h1 className="text-2xl font-bold text-primary mb-6">Legal Disclaimer</h1>
+    <div className="mx-auto max-w-3xl px-4 py-16 lg:py-20">
+      <div className="mb-12 text-center">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] shadow-glow">
+          <Scale className="h-8 w-8 text-accent" />
+        </div>
+        <h1 className="mb-3 text-3xl font-bold sm:text-4xl">Legal Disclaimer</h1>
+        <p className="mx-auto max-w-lg text-muted">
+          Important legal information about using StreamVault.
+        </p>
+      </div>
 
-      <div className="space-y-6 text-sm text-muted leading-relaxed">
-        <section>
-          <h2 className="text-base font-semibold text-primary mb-2">Personal Use Only</h2>
-          <p>StreamVault is a personal tool intended for downloading content you have the legal right to download — such as your own uploads, content under Creative Commons or other open licenses, or content where the platform explicitly permits downloading.</p>
-        </section>
+      <div className="space-y-4">
+        {SECTIONS.map(({ title, text, link }, i) => (
+          <div key={title} className="card p-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-surface-2 border border-[var(--border)] font-mono text-xs text-muted">
+                {i + 1}
+              </span>
+              <div>
+                <h2 className="mb-2 text-base font-semibold text-primary">{title}</h2>
+                <p className="text-sm leading-relaxed text-muted">{text}</p>
+                {link && (
+                  <Link
+                    href={link.href}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs text-accent hover:underline"
+                  >
+                    {link.label}
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        <section>
-          <h2 className="text-base font-semibold text-primary mb-2">Copyright</h2>
-          <p>Downloading copyrighted content without the copyright holder&apos;s permission may violate copyright law in your jurisdiction. You are solely responsible for ensuring your use of this tool complies with applicable laws and the terms of service of the platforms you access.</p>
-        </section>
-
-        <section>
-          <h2 className="text-base font-semibold text-primary mb-2">No Warranty</h2>
-          <p>This software is provided &ldquo;as is&rdquo; without warranty of any kind. We make no guarantees about availability, accuracy, or fitness for any particular purpose.</p>
-        </section>
-
-        <section>
-          <h2 className="text-base font-semibold text-primary mb-2">Privacy</h2>
-          <p>We do not collect, store, or share any personal data. See the <a href="/security" className="text-accent hover:underline">Security</a> page for full details.</p>
-        </section>
-
-        <section>
-          <h2 className="text-base font-semibold text-primary mb-2">DMCA</h2>
-          <p>StreamVault does not host or cache any content. It acts as a client-side tool to interface with publicly available streaming protocols. We are not responsible for the content accessed through this tool.</p>
-        </section>
+      <div className="mt-10 flex flex-wrap justify-center gap-4 text-sm">
+        <Link href="/terms" className="text-accent hover:underline flex items-center gap-1">
+          Terms of Service <ArrowRight className="h-3 w-3" />
+        </Link>
+        <span className="text-faint">•</span>
+        <Link href="/privacy" className="text-accent hover:underline flex items-center gap-1">
+          Privacy Policy <ArrowRight className="h-3 w-3" />
+        </Link>
+        <span className="text-faint">•</span>
+        <Link href="/security" className="text-accent hover:underline flex items-center gap-1">
+          Security <ArrowRight className="h-3 w-3" />
+        </Link>
       </div>
     </div>
   )

@@ -29,8 +29,8 @@ function QualityBadge({ label, selected, onClick }: { label: string; selected: b
       className={cn(
         'relative flex h-10 min-w-[64px] items-center justify-center rounded-xl px-3 text-sm font-medium transition-all',
         selected
-          ? 'bg-accent text-black ring-2 ring-accent ring-offset-1 ring-offset-surface'
-          : 'bg-surface-2 text-muted ring-1 ring-white/5 hover:ring-white/15 hover:text-primary'
+          ? 'bg-accent text-white dark:text-black ring-2 ring-accent ring-offset-1 ring-offset-surface'
+          : 'bg-surface-2 text-muted border border-[var(--border)] hover:border-[var(--border-strong)] hover:text-primary'
       )}
     >
       {isHdr && !selected && (
@@ -81,7 +81,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-surface p-5 space-y-5 animate-fade_in">
+    <div className="card p-5 space-y-5 animate-fade_in">
       {/* Video Quality */}
       <div>
         <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
@@ -102,10 +102,15 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
 
       {/* Subtitles — always visible when available */}
       {subtitleTracks.length > 0 && (
-        <div className="rounded-xl border border-white/5 bg-surface-2/40 p-4 space-y-3">
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
-            <Subtitles className="h-3 w-3" /> Subtitles
-          </p>
+        <div className="rounded-xl border border-[var(--border)] bg-surface-2/40 p-4 space-y-3">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
+              <Subtitles className="h-3 w-3" /> Subtitles
+            </p>
+            <p className="mt-1 text-[11px] text-muted">
+              Selected languages are bundled with the video below. Or grab a standalone .srt / .vtt file.
+            </p>
+          </div>
 
           <div className="flex flex-wrap gap-2">
             {subtitleTracks.map((s) => (
@@ -116,7 +121,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
                   'rounded-xl px-3 py-1.5 text-xs transition-all',
                   selectedSubs.includes(s.languageCode)
                     ? 'bg-accent/15 text-accent ring-1 ring-accent/30'
-                    : 'bg-surface-2 text-muted ring-1 ring-white/5 hover:ring-white/15'
+                    : 'bg-surface-2 text-muted border border-[var(--border)] hover:border-[var(--border-strong)]'
                 )}
               >
                 {s.language}
@@ -135,7 +140,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
                     className={cn(
                       'rounded-lg px-3 py-1.5 text-xs capitalize transition-all',
                       subtitleMode === m
-                        ? 'bg-surface-2 text-primary ring-1 ring-white/15'
+                        ? 'bg-surface-2 text-primary ring-1 ring-[var(--border)]'
                         : 'text-faint hover:text-muted'
                     )}
                   >
@@ -164,7 +169,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
                         <button
                           disabled={loading}
                           onClick={() => downloadSubOnly(lang, 'vtt')}
-                          className="flex items-center gap-1 rounded-lg border border-white/10 bg-surface-2 px-2.5 py-1.5 text-xs text-muted transition hover:text-primary disabled:opacity-40"
+                          className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-surface-2 px-2.5 py-1.5 text-xs text-muted transition hover:text-primary disabled:opacity-40"
                         >
                           <FileText className="h-3 w-3" />
                           .vtt
@@ -189,7 +194,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
       </button>
 
       {advanced && (
-        <div className="space-y-4 border-t border-white/5 pt-4 animate-fade_in">
+        <div className="space-y-4 border-t border-[var(--border)] pt-4 animate-fade_in">
           {audioTracks.length > 0 && (
             <div>
               <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
@@ -204,7 +209,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
                       'flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs transition-all',
                       selectedAudio.includes(t.id)
                         ? 'bg-accent/15 text-accent ring-1 ring-accent/30'
-                        : 'bg-surface-2 text-muted ring-1 ring-white/5 hover:ring-white/15'
+                        : 'bg-surface-2 text-muted border border-[var(--border)] hover:border-[var(--border-strong)]'
                     )}
                   >
                     <span className="h-2 w-2 rounded-full" style={{ background: selectedAudio.includes(t.id) ? 'var(--accent)' : 'var(--faint)' }} />
@@ -228,7 +233,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
                   className={cn(
                     'rounded-xl px-3 py-1.5 font-mono text-xs uppercase transition-all',
                     container === c
-                      ? 'bg-surface-2 text-primary ring-1 ring-white/20'
+                      ? 'bg-surface-2 text-primary ring-1 ring-[var(--border)]'
                       : 'text-faint hover:text-muted'
                   )}
                 >
@@ -240,7 +245,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-between border-t border-white/5 pt-4">
+      <div className="flex items-center justify-between border-t border-[var(--border)] pt-4">
         <div>
           <p className="text-xs text-muted">Estimated size</p>
           <p className="text-sm font-semibold text-primary">{estimatedSize}</p>
@@ -260,7 +265,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
             'flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-200',
             selectedFormat && !loading
               ? 'bg-accent text-black hover:scale-[1.02] glow'
-              : 'cursor-not-allowed bg-surface-2 text-faint ring-1 ring-white/5'
+              : 'cursor-not-allowed bg-surface-2 text-faint ring-1 ring-[var(--border)]'
           )}
         >
           <Download className="h-4 w-4" />

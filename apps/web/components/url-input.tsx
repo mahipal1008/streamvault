@@ -40,8 +40,8 @@ export function UrlInput({ onAnalyze, loading, disabled }: Props) {
     <form onSubmit={handleSubmit} className="w-full">
       <div
         className={cn(
-          'relative flex items-center rounded-2xl border bg-surface transition-all duration-200',
-          focused ? 'border-accent/50 glow' : 'border-white/8',
+          'relative flex items-center rounded-2xl border bg-surface shadow-sm transition-all duration-200',
+          focused ? 'border-accent/50 glow shadow-md' : 'border-[var(--border)]',
           loading && 'opacity-80'
         )}
       >
@@ -78,7 +78,7 @@ export function UrlInput({ onAnalyze, loading, disabled }: Props) {
             <button
               type="button"
               onClick={() => setValue('')}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition hover:bg-white/5 hover:text-primary"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition hover:bg-surface-2 hover:text-primary"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -88,7 +88,7 @@ export function UrlInput({ onAnalyze, loading, disabled }: Props) {
             <button
               type="button"
               onClick={handlePaste}
-              className="hidden rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-muted ring-1 ring-white/5 transition hover:bg-white/5 hover:text-primary sm:flex"
+              className="hidden rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-muted border border-[var(--border)] transition hover:bg-surface-3 hover:text-primary sm:flex"
             >
               Paste
             </button>
@@ -100,8 +100,8 @@ export function UrlInput({ onAnalyze, loading, disabled }: Props) {
             className={cn(
               'flex h-10 min-w-[100px] items-center justify-center gap-2 rounded-xl text-sm font-medium transition-all duration-200',
               value && !loading && !disabled
-                ? 'bg-accent text-black hover:glow-strong hover:scale-[1.02]'
-                : 'bg-surface-2 text-muted cursor-not-allowed ring-1 ring-white/5'
+                ? 'bg-accent text-white dark:text-black hover:bg-accent-hover hover:shadow-glow-strong hover:scale-[1.02]'
+                : 'bg-surface-2 text-muted cursor-not-allowed border border-[var(--border)]'
             )}
           >
             {loading ? (

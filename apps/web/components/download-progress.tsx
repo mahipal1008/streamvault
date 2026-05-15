@@ -34,7 +34,7 @@ export function DownloadProgress({
   const label = isDone ? 'Saved to device' : phase === 'decrypt' ? 'Decrypting…' : 'Downloading…'
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-surface p-5 animate-fade_in">
+    <div className="card p-5 animate-fade_in">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-semibold text-primary">
@@ -86,11 +86,11 @@ export function DownloadProgress({
 
       {!isDone && (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className={cn('rounded-lg p-2 text-center ring-1 transition-all', phase === 'server' ? 'bg-accent/10 ring-accent/20 text-accent' : 'bg-surface-2 ring-white/5 text-muted')}>
+          <div className={cn('rounded-lg p-2 text-center border transition-all', phase === 'server' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-surface-2 border-[var(--border)] text-muted')}>
             <p className="text-xs font-medium">1. Server Fetch</p>
             <p className="mt-0.5 font-mono text-xs">{Math.round(serverProgress)}%</p>
           </div>
-          <div className={cn('rounded-lg p-2 text-center ring-1 transition-all', isDecrypt ? 'bg-accent/10 ring-accent/20 text-accent' : isDone ? 'bg-success/10 ring-success/20 text-success' : 'bg-surface-2 ring-white/5 text-muted')}>
+          <div className={cn('rounded-lg p-2 text-center border transition-all', isDecrypt ? 'bg-accent/10 border-accent/20 text-accent' : isDone ? 'bg-[var(--success-bg)] border-success/20 text-success' : 'bg-surface-2 border-[var(--border)] text-muted')}>
             <p className="text-xs font-medium">2. Decrypt & Save</p>
             <p className="mt-0.5 font-mono text-xs">{Math.round(decryptProgress)}%</p>
           </div>
