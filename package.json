@@ -2,19 +2,21 @@
   "name": "streamvault",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "pnpm --parallel --filter=./apps/* dev",
-    "build": "pnpm --filter=./packages/* build && pnpm --parallel --filter=./apps/* build",
-    "lint": "pnpm --parallel --filter=./apps/* lint",
-    "typecheck": "pnpm --parallel --filter=* typecheck"
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
     "prettier": "3.4.2",
     "typescript": "5.6.3"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=9.0.0"
+    "node": ">=20.0.0"
   }
 }

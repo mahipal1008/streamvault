@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Download, ChevronDown, ChevronUp, Mic, Subtitles, Music } from 'lucide-react'
+import { Download, ChevronDown, ChevronUp, Mic, Subtitles, Music, FileText } from 'lucide-react'
 import type { VideoMetadata, Container, SubtitleMode } from 'streamvault-shared'
 import { formatBytes } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ interface Props {
     subtitleLangs: string[]
     subtitleMode: SubtitleMode
     container: Container
+    subtitleFormat?: 'srt' | 'vtt'
   }) => void
   loading: boolean
 }
@@ -68,8 +69,20 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
     setSelectedSubs((prev) => prev.includes(lang) ? prev.filter((s) => s !== lang) : [...prev, lang])
   }
 
+  const downloadSubOnly = (lang: string, fmt: 'srt' | 'vtt') => {
+    onDownload({
+      videoFormatId: 'subs-only',
+      audioTrackIds: [],
+      subtitleLangs: [lang],
+      subtitleMode: 'sidecar',
+      container: 'mp4',
+      subtitleFormat: fmt,
+    })
+  }
+
   return (
     <div className="rounded-2xl border border-white/8 bg-surface p-5 space-y-5 animate-fade_in">
+      {/* Video Quality */}
       <div>
         <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
           Video Quality
@@ -87,32 +100,86 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
         </div>
       </div>
 
-      {audioTracks.length > 0 && (
-        <div>
-          <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
-            <Mic className="h-3 w-3" /> Audio Tracks
+      {/* Subtitles — always visible when available */}
+      {subtitleTracks.length > 0 && (
+        <div className="rounded-xl border border-white/5 bg-surface-2/40 p-4 space-y-3">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
+            <Subtitles className="h-3 w-3" /> Subtitles
           </p>
+
           <div className="flex flex-wrap gap-2">
-            {audioTracks.map((t) => (
+            {subtitleTracks.map((s) => (
               <button
-                key={t.id}
-                onClick={() => toggleAudio(t.id)}
+                key={s.languageCode}
+                onClick={() => toggleSub(s.languageCode)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs transition-all',
-                  selectedAudio.includes(t.id)
+                  'rounded-xl px-3 py-1.5 text-xs transition-all',
+                  selectedSubs.includes(s.languageCode)
                     ? 'bg-accent/15 text-accent ring-1 ring-accent/30'
                     : 'bg-surface-2 text-muted ring-1 ring-white/5 hover:ring-white/15'
                 )}
               >
-                <span className="h-2 w-2 rounded-full" style={{ background: selectedAudio.includes(t.id) ? 'var(--accent)' : 'var(--faint)' }} />
-                {t.language ?? t.id}
-                {t.isOriginal && <span className="text-faint">(default)</span>}
+                {s.language}
               </button>
             ))}
           </div>
+
+          {selectedSubs.length > 0 && (
+            <>
+              <div className="flex gap-2 flex-wrap">
+                <span className="text-xs text-faint pt-1">Embed mode:</span>
+                {(['soft', 'hard', 'sidecar'] as SubtitleMode[]).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setSubtitleMode(m)}
+                    className={cn(
+                      'rounded-lg px-3 py-1.5 text-xs capitalize transition-all',
+                      subtitleMode === m
+                        ? 'bg-surface-2 text-primary ring-1 ring-white/15'
+                        : 'text-faint hover:text-muted'
+                    )}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+
+              {/* Per-language subtitle file download buttons */}
+              <div className="space-y-1.5">
+                <p className="text-xs text-faint">Download subtitle file only:</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedSubs.map((lang) => {
+                    const track = subtitleTracks.find(t => t.languageCode === lang)
+                    const label = track?.language ?? lang
+                    return (
+                      <div key={lang} className="flex gap-1">
+                        <button
+                          disabled={loading}
+                          onClick={() => downloadSubOnly(lang, 'srt')}
+                          className="flex items-center gap-1 rounded-lg border border-accent/20 bg-accent/5 px-2.5 py-1.5 text-xs text-accent transition hover:bg-accent/10 disabled:opacity-40"
+                        >
+                          <FileText className="h-3 w-3" />
+                          {label} .srt
+                        </button>
+                        <button
+                          disabled={loading}
+                          onClick={() => downloadSubOnly(lang, 'vtt')}
+                          className="flex items-center gap-1 rounded-lg border border-white/10 bg-surface-2 px-2.5 py-1.5 text-xs text-muted transition hover:text-primary disabled:opacity-40"
+                        >
+                          <FileText className="h-3 w-3" />
+                          .vtt
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
+      {/* Advanced toggle */}
       <button
         onClick={() => setAdvanced(!advanced)}
         className="flex items-center gap-1.5 text-xs text-muted transition hover:text-primary"
@@ -123,45 +190,29 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
 
       {advanced && (
         <div className="space-y-4 border-t border-white/5 pt-4 animate-fade_in">
-          {subtitleTracks.length > 0 && (
+          {audioTracks.length > 0 && (
             <div>
               <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-faint">
-                <Subtitles className="h-3 w-3" /> Subtitles
+                <Mic className="h-3 w-3" /> Audio Tracks
               </p>
-              <div className="mb-3 flex flex-wrap gap-2">
-                {subtitleTracks.map((s) => (
+              <div className="flex flex-wrap gap-2">
+                {audioTracks.map((t) => (
                   <button
-                    key={s.languageCode}
-                    onClick={() => toggleSub(s.languageCode)}
+                    key={t.id}
+                    onClick={() => toggleAudio(t.id)}
                     className={cn(
-                      'rounded-xl px-3 py-1.5 text-xs transition-all',
-                      selectedSubs.includes(s.languageCode)
+                      'flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs transition-all',
+                      selectedAudio.includes(t.id)
                         ? 'bg-accent/15 text-accent ring-1 ring-accent/30'
                         : 'bg-surface-2 text-muted ring-1 ring-white/5 hover:ring-white/15'
                     )}
                   >
-                    {s.language}
+                    <span className="h-2 w-2 rounded-full" style={{ background: selectedAudio.includes(t.id) ? 'var(--accent)' : 'var(--faint)' }} />
+                    {t.language ?? t.id}
+                    {t.isOriginal && <span className="text-faint">(default)</span>}
                   </button>
                 ))}
               </div>
-              {selectedSubs.length > 0 && (
-                <div className="flex gap-2">
-                  {(['soft', 'hard', 'sidecar'] as SubtitleMode[]).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setSubtitleMode(m)}
-                      className={cn(
-                        'rounded-lg px-3 py-1.5 text-xs capitalize transition-all',
-                        subtitleMode === m
-                          ? 'bg-surface-2 text-primary ring-1 ring-white/15'
-                          : 'text-faint hover:text-muted'
-                      )}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
@@ -213,7 +264,7 @@ export function FormatPicker({ meta, onDownload, loading }: Props) {
           )}
         >
           <Download className="h-4 w-4" />
-          Download
+          {loading ? 'Downloading…' : 'Download'}
         </button>
       </div>
     </div>

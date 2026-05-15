@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
+import { mkdirSync, readdirSync } from 'node:fs'
 import type { DownloadRequest, DownloadResponse } from 'streamvault-shared'
 import { createJob, getJob } from '../jobs/registry.js'
 import { setKey } from '../jobs/keystore.js'
@@ -39,6 +40,7 @@ export default async function downloadRoute(app: FastifyInstance) {
             subtitleMode: { type: 'string', enum: ['soft', 'hard', 'sidecar'] },
             container: { type: 'string', enum: ['mkv', 'mp4', 'webm', 'mp3', 'aac', 'flac', 'm4a', 'ogg'] },
             preferredLane: { type: 'string', enum: ['direct', 'proxy'] },
+            subtitleFormat: { type: 'string', enum: ['srt', 'vtt'] },
           },
         },
       },
@@ -49,9 +51,21 @@ export default async function downloadRoute(app: FastifyInstance) {
       const key = generateKey()
       const lane = selectLane(body.preferredLane === 'proxy')
       const proxyUrl = lane === 'proxy' ? getProxyUrl() : undefined
-      const ext = body.container ?? 'mp4'
-      const outputPath = join(tmpdir(), `sv_${jobId}.${ext}`)
-      const filename = `download.${ext}`
+
+      const isSubsOnly = body.videoFormatId === 'subs-only'
+      const subFmt = body.subtitleFormat ?? 'srt'
+
+      // For subtitle-only: write into a dedicated tmpdir so we can glob the results
+      const subsDir = join(tmpdir(), `sv_subs_${jobId}`)
+      const ext = isSubsOnly ? subFmt : (body.container ?? 'mp4')
+      const outputPath = isSubsOnly
+        ? join(subsDir, `sub.%(ext)s`)
+        : join(tmpdir(), `sv_${jobId}.${ext}`)
+      const filename = isSubsOnly
+        ? `subtitles.${subFmt}`
+        : `download.${ext}`
+
+      if (isSubsOnly) mkdirSync(subsDir, { recursive: true })
 
       const job = createJob({ id: jobId, url: body.url, lane, outputPath, filename })
       setKey(jobId, key)
@@ -67,6 +81,7 @@ export default async function downloadRoute(app: FastifyInstance) {
           outputPath,
           proxyUrl,
           useIosFallback,
+          subtitleFormat: subFmt,
         })
         return spawn('yt-dlp', spawnArgs, { stdio: ['ignore', 'pipe', 'pipe'] })
       }
@@ -106,6 +121,17 @@ export default async function downloadRoute(app: FastifyInstance) {
 
       proc.on('close', (code) => {
         if (code === 0) {
+          // For subtitle-only: find the actual output file and update job.outputPath
+          if (isSubsOnly) {
+            try {
+              const files = readdirSync(subsDir).filter(f => f.endsWith(`.${subFmt}`) || f.endsWith('.srt') || f.endsWith('.vtt'))
+              if (files.length > 0) {
+                const picked = files[0]
+                job.outputPath = join(subsDir, picked)
+                job.filename = picked
+              }
+            } catch (_) {}
+          }
           job.status = 'done'
           job.progress = 100
           job.emitter.emit('done', {})
@@ -113,7 +139,7 @@ export default async function downloadRoute(app: FastifyInstance) {
           const lastErr = stderrBuf.slice(-600).trim()
           const botDetected = lastErr.includes('Sign in') || lastErr.includes('bot') || lastErr.includes('Confirm you')
           // Auto-retry YouTube with ios/android fallback if bot-detected and no proxy
-          if (botDetected && !proxyUrl) {
+          if (botDetected && !proxyUrl && !isSubsOnly) {
             process.stderr.write(`[StreamVault] bot-detected, retrying with ios fallback | ${body.url}\n`)
             stderrBuf = ''
             proc = spawnYtdlp(true)

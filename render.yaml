@@ -3,6 +3,7 @@ services:
     name: streamvault-api
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
     plan: starter
     healthCheckPath: /healthz
     autoDeploy: true
@@ -21,8 +22,8 @@ services:
   - type: web
     name: streamvault-web
     runtime: node
-    buildCommand: npm install -g pnpm@9 && pnpm install && pnpm --filter=streamvault-shared build && pnpm --filter=streamvault-web build
-    startCommand: pnpm --filter=streamvault-web start
+    buildCommand: npm install && npm run build --workspace=packages/shared && npm run build --workspace=apps/web
+    startCommand: npm run start --workspace=apps/web
     plan: starter
     autoDeploy: true
     envVars:

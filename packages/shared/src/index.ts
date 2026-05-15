@@ -70,12 +70,13 @@ export interface VideoMetadata {
 
 export interface DownloadRequest {
   url: string
-  videoFormatId: string
+  videoFormatId: string  // 'subs-only' for subtitle-file-only download
   audioTrackIds: string[]
   subtitleLangs: string[]
   subtitleMode: SubtitleMode
   container: Container
   preferredLane?: LaneType
+  subtitleFormat?: 'srt' | 'vtt'  // used when videoFormatId === 'subs-only'
 }
 
 export interface DownloadResponse {

@@ -137,10 +137,27 @@ export function buildArgs(opts: {
   outputPath: string
   proxyUrl?: string
   useIosFallback?: boolean
+  subtitleFormat?: string
 }): string[] {
   const baseArgs = opts.useIosFallback && isYouTubeUrl(opts.url) && !opts.proxyUrl
     ? buildIosArgs(opts.proxyUrl)
     : buildBaseArgs(opts.proxyUrl)
+
+  // Subtitle-only mode: download just the .srt / .vtt file, skip video entirely
+  if (opts.videoFormatId === 'subs-only') {
+    const args = [...baseArgs]
+    args.push('--skip-download')
+    args.push('--write-subs', '--write-auto-subs')
+    const langs = opts.subtitleLangs.length > 0 ? opts.subtitleLangs.join(',') : 'en'
+    args.push('--sub-langs', langs)
+    args.push('--sub-format', opts.subtitleFormat ?? 'srt/vtt/best')
+    args.push('--no-overwrites')
+    args.push('--newline')
+    args.push('-o', opts.outputPath)
+    args.push(opts.url)
+    return args
+  }
+
   const args: string[] = [...baseArgs]
 
   const isAudioOnly =

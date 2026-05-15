@@ -52,7 +52,7 @@ export default function HomePage() {
   }, [])
 
   const handleDownload = useCallback(
-    async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: Container }) => {
+    async (params: { videoFormatId: string; audioTrackIds: string[]; subtitleLangs: string[]; subtitleMode: SubtitleMode; container: Container; subtitleFormat?: 'srt' | 'vtt' }) => {
       if (!meta) return
       setPhase('preparing')
 
